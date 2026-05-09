@@ -1,0 +1,62 @@
+import {
+  Controller,
+  Post,
+  Body,
+  UsePipes,
+  UseGuards,
+  HttpCode,
+  HttpStatus,
+} from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { AuthService } from './auth.service';
+import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import {
+  SendOtpDto,
+  VerifyOtpDto,
+  RefreshTokenDto,
+  SendOtpDtoType,
+  VerifyOtpDtoType,
+  JwtPayloadType,
+} from '@yallaplay/shared-types';
+
+@ApiTags('Auth')
+@Controller('auth')
+export class AuthController {
+  constructor(private readonly authService: AuthService) {}
+
+  @Post('otp/send')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Send OTP to phone number' })
+  @UsePipes(new ZodValidationPipe(SendOtpDto))
+  sendOtp(@Body() dto: SendOtpDtoType) {
+    return this.authService.sendOtp(dto);
+  }
+
+  @Post('otp/verify')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Verify OTP and receive tokens' })
+  @UsePipes(new ZodValidationPipe(VerifyOtpDto))
+  verifyOtp(@Body() dto: VerifyOtpDtoType) {
+    return this.authService.verifyOtp(dto);
+  }
+
+  @Post('token/refresh')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Rotate refresh token' })
+  @UsePipes(new ZodValidationPipe(RefreshTokenDto))
+  refresh(@Body() dto: { refreshToken: string }, @CurrentUser() user: JwtPayloadType) {
+    // Note: refresh endpoint uses a separate guard that validates the refresh token secret
+    return this.authService.refreshTokens(user.sub, dto.refreshToken);
+  }
+
+  @Post('logout')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Invalidate refresh token' })
+  logout(@CurrentUser() user: JwtPayloadType) {
+    return this.authService.logout(user.sub);
+  }
+}

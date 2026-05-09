@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+@layer base {
+  :root {
+    --canvas-primary:   #0A0E1A;
+    --canvas-secondary: #0F1428;
+    --canvas-elevated:  #141830;
+    --brand-primary:    #4F46E5;
+    --brand-secondary:  #7C3AED;
+    --brand-glow:       rgba(79, 70, 229, 0.35);
+    --glass-border:     rgba(255, 255, 255, 0.12);
+    --glass-highlight:  rgba(255, 255, 255, 0.06);
+    --text-primary:     #F9FAFB;
+    --text-secondary:   #9CA3AF;
+    --text-tertiary:    #6B7280;
+    --success:          #10B981;
+    --warning:          #F59E0B;
+    --error:            #EF4444;
+    --info:             #3B82F6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    background-color: var(--canvas-primary);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+}
+
+@layer components {
+  /* ── Glass Card ─────────────────────────────────────────────── */
+  .glass-card {
+    @apply relative overflow-hidden rounded-xl border border-white/10;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+  .glass-card::before {
+    content: '';
+    @apply absolute inset-x-0 top-0 h-px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08), transparent);
+  }
+
+  .glass-card-strong {
+    @apply glass-card;
+    background: rgba(255, 255, 255, 0.09);
+  }
+
+  .glass-card-subtle {
+    @apply glass-card;
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  /* ── Brand Button ───────────────────────────────────────────── */
+  .btn-brand {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white transition-all duration-150;
+    background: linear-gradient(135deg, #4F46E5, #7C3AED);
+    box-shadow: 0 0 20px rgba(79,70,229,0.25);
+  }
+  .btn-brand:hover {
+    box-shadow: 0 0 28px rgba(79,70,229,0.4);
+    transform: translateY(-1px);
+  }
+  .btn-brand:active { transform: translateY(0); }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-150;
+    @apply text-[--text-secondary] border border-white/10;
+    background: rgba(255,255,255,0.04);
+  }
+  .btn-ghost:hover {
+    @apply text-[--text-primary] border-white/20;
+    background: rgba(255,255,255,0.08);
+  }
+
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all duration-150;
+    @apply text-[--error] border border-red-500/30;
+    background: rgba(239,68,68,0.1);
+  }
+  .btn-danger:hover { background: rgba(239,68,68,0.18); }
+
+  /* ── Status Badge ───────────────────────────────────────────── */
+  .badge { @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold; }
+  .badge-success { @apply badge bg-emerald-500/15 text-emerald-400 border border-emerald-500/25; }
+  .badge-warning { @apply badge bg-amber-500/15  text-amber-400  border border-amber-500/25; }
+  .badge-error   { @apply badge bg-red-500/15    text-red-400    border border-red-500/25; }
+  .badge-info    { @apply badge bg-blue-500/15   text-blue-400   border border-blue-500/25; }
+  .badge-ghost   { @apply badge bg-white/5       text-[--text-tertiary] border border-white/10; }
+
+  /* ── Table ──────────────────────────────────────────────────── */
+  .data-table { @apply w-full border-collapse; }
+  .data-table thead tr { @apply border-b border-white/8; }
+  .data-table th {
+    @apply px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-[--text-tertiary];
+  }
+  .data-table td { @apply px-4 py-3 text-sm text-[--text-secondary] border-b border-white/5; }
+  .data-table tbody tr {
+    @apply transition-colors duration-100;
+  }
+  .data-table tbody tr:hover { background: rgba(255,255,255,0.03); }
+  .data-table tbody tr:last-child td { @apply border-b-0; }
+
+  /* ── Input ──────────────────────────────────────────────────── */
+  .field-input {
+    @apply w-full px-3 py-2 rounded-lg text-sm text-[--text-primary] outline-none transition-all duration-150;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .field-input::placeholder { color: var(--text-tertiary); }
+  .field-input:focus { border-color: rgba(79,70,229,0.6); box-shadow: 0 0 0 3px rgba(79,70,229,0.12); }
+
+  .field-select {
+    @apply field-input appearance-none cursor-pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%239CA3AF' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 32px;
+  }
+  .field-select option { background: #141830; }
+
+  /* ── Sidebar nav link ───────────────────────────────────────── */
+  .nav-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-150;
+    @apply text-[--text-secondary];
+  }
+  .nav-link:hover { @apply text-[--text-primary] bg-white/5; }
+  .nav-link.active {
+    @apply text-[--text-primary] bg-brand-primary/15 border border-brand-primary/25;
+    text-shadow: 0 0 20px rgba(79,70,229,0.5);
+  }
+  .nav-link.active .nav-icon { color: var(--brand-primary); }
+}
+
+@layer utilities {
+  .text-gradient {
+    background: linear-gradient(135deg, #818CF8, #C084FC);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .glow-brand { box-shadow: 0 0 30px rgba(79,70,229,0.3); }
+  .border-glass { border: 1px solid rgba(255,255,255,0.12); }
+  .bg-elevated { background-color: var(--canvas-elevated); }
+  .bg-canvas { background-color: var(--canvas-primary); }
+}
