@@ -18,25 +18,24 @@ export class Facility {
   @Prop({ type: [String], enum: SportType, required: true })
   sports: string[];
 
-  @Prop({ type: [String], required: true })
+  @Prop({ type: [String], default: [] })
   images: string[];
 
   @Prop({
     type: {
       type: String,
       enum: ['Point'],
-      required: true,
       default: 'Point',
     },
-    coordinates: { type: [Number], required: true },
+    coordinates: { type: [Number] },
   })
-  location: { type: string; coordinates: [number, number] };
+  location?: { type: string; coordinates: [number, number] };
 
   @Prop({ required: true })
   address: string;
 
-  @Prop({ required: true })
-  phone: string;
+  @Prop()
+  phone?: string;
 
   @Prop({ type: Number, required: true, min: 30, max: 180 })
   slotDurationMinutes: number;

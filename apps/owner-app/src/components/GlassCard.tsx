@@ -1,6 +1,5 @@
 import React from 'react';
 import { View, ViewStyle, StyleSheet } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { Colors, Radius } from '../theme';
 
 interface GlassCardProps {
@@ -10,13 +9,12 @@ interface GlassCardProps {
 }
 
 export function GlassCard({ children, style, variant = 'default' }: GlassCardProps) {
-  const bg = variant === 'subtle' ? Colors.glass.subtle
-           : variant === 'strong' ? Colors.glass.medium
-           : Colors.glass.light;
+  const bg = variant === 'subtle' ? Colors.background.secondary
+           : variant === 'strong' ? Colors.background.elevated
+           : Colors.background.primary;
 
   return (
     <View style={[styles.card, { backgroundColor: bg }, style]}>
-      <View style={[StyleSheet.absoluteFill, styles.shimmer]} pointerEvents="none" />
       {children}
     </View>
   );
@@ -28,10 +26,5 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.glass.border,
     overflow: 'hidden',
-  },
-  shimmer: {
-    borderTopWidth: 1,
-    borderTopColor: Colors.glass.highlight,
-    borderRadius: Radius.lg,
   },
 });

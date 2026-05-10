@@ -17,8 +17,8 @@ interface AuthState {
   isLoading: boolean;
 
   initialize: () => Promise<void>;
-  sendOtp: (phone: string) => Promise<void>;
-  verifyOtp: (phone: string, otp: string) => Promise<void>;
+  register: (name: string, phone: string, password: string) => Promise<void>;
+  login: (phone: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -41,14 +41,18 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
-  sendOtp: async (phone: string) => {
-    await authApi.sendOtp(phone);
-  },
-
-  verifyOtp: async (phone: string, otp: string) => {
-    const { data } = await authApi.verifyOtp(phone, otp);
+  register: async (name, phone, password) => {
+    const { data } = await authApi.register({ name, phone, password, role: 'owner' });
     const { accessToken, refreshToken, user } = data.data;
     if (user.role !== 'owner') throw new Error('ليس حساب مالك ملعب');
+    await saveTokens(accessToken, refreshToken);
+    set({ owner: user, isAuthenticated: true });
+  },
+
+  login: async (phone, password) => {
+    const { data } = await authApi.login(phone, password);
+    const { accessToken, refreshToken, user } = data.data;
+    if (user.role !== 'owner') throw new Error('هذا الحساب ليس حساب مالك ملعب');
     await saveTokens(accessToken, refreshToken);
     set({ owner: user, isAuthenticated: true });
   },

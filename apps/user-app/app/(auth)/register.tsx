@@ -26,6 +26,7 @@ const SPORTS = [
 ] as const;
 
 export default function RegisterScreen() {
+  const goBack = () => router.canGoBack() ? router.back() : router.replace('/(auth)/welcome');
   const [name, setName]           = useState('');
   const [phone, setPhone]         = useState('+963');
   const [password, setPassword]   = useState('');
@@ -51,7 +52,19 @@ export default function RegisterScreen() {
       await register(name.trim(), phone, password, skillLevel, sports);
       router.replace('/(tabs)');
     } catch (err: any) {
-      Alert.alert('خطأ في إنشاء الحساب', err?.response?.data?.message ?? 'حدث خطأ، يرجى المحاولة مجدداً');
+      const status = err?.response?.status;
+      if (status === 409) {
+        Alert.alert(
+          'الرقم مسجل مسبقاً',
+          'هذا الرقم لديه حساب بالفعل. هل تريد تسجيل الدخول؟',
+          [
+            { text: 'إلغاء', style: 'cancel' },
+            { text: 'تسجيل الدخول', onPress: () => router.replace('/(auth)/login') },
+          ],
+        );
+      } else {
+        Alert.alert('خطأ في إنشاء الحساب', err?.response?.data?.message ?? 'حدث خطأ، يرجى المحاولة مجدداً');
+      }
     } finally {
       setLoading(false);
     }
@@ -62,7 +75,7 @@ export default function RegisterScreen() {
       {/* Green header */}
       <View style={styles.header}>
         <SafeAreaView edges={['top']}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={goBack} style={styles.backBtn}>
             <Text style={styles.backText}>→ رجوع</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>إنشاء حساب</Text>

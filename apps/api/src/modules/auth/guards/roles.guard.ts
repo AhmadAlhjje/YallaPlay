@@ -15,7 +15,8 @@ export class RolesGuard implements CanActivate {
 
     if (!requiredRoles || requiredRoles.length === 0) return true;
 
-    const { user } = context.switchToHttp().getRequest<{ user: JwtPayloadType }>();
+    const { user } = context.switchToHttp().getRequest<{ user?: JwtPayloadType }>();
+    if (!user) return true; // JwtAuthGuard handles unauthenticated requests
     if (!requiredRoles.includes(user.role as UserRole)) {
       throw new ForbiddenException('ليس لديك صلاحية للوصول إلى هذا المورد.');
     }

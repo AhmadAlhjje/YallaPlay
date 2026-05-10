@@ -1,12 +1,11 @@
 import { Tabs, Redirect } from 'expo-router';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { useAuthStore } from '../../src/store/auth.store';
-import { Colors, Radius } from '../../src/theme';
+import { Colors } from '../../src/theme';
 
 function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
   return (
-    <View style={[styles.tabIcon]}>
+    <View style={styles.tabIcon}>
       <Text style={{ fontSize: focused ? 22 : 20 }}>{emoji}</Text>
       <Text style={[styles.tabLabel, { color: focused ? Colors.brand.primary : Colors.text.tertiary }]}>
         {label}
@@ -25,9 +24,7 @@ export default function OwnerTabsLayout() {
         headerShown: false,
         tabBarStyle: styles.tabBar,
         tabBarBackground: () => (
-          Platform.OS === 'ios'
-            ? <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-            : <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.background.elevated + 'F0' }]} />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: '#FFFFFF' }]} />
         ),
         tabBarShowLabel: false,
         tabBarActiveTintColor: Colors.brand.primary,
@@ -47,11 +44,11 @@ const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
     borderTopWidth: 1,
-    borderTopColor: Colors.glass.border,
+    borderTopColor: Colors.border.default,
     backgroundColor: 'transparent',
     height: Platform.OS === 'ios' ? 88 : 68,
     elevation: 0,
   },
-  tabIcon: { alignItems: 'center', justifyContent: 'center', paddingTop: 8, gap: 2 },
+  tabIcon:  { alignItems: 'center', justifyContent: 'center', paddingTop: 8, gap: 2 },
   tabLabel: { fontSize: 10, fontWeight: '500' },
 });

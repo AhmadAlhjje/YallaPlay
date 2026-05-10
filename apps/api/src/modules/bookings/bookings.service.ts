@@ -314,6 +314,8 @@ export class BookingsService {
     ownerId: string,
     date?: string,
     status?: string,
+    page = 1,
+    limit = 30,
   ) {
     await this.facilitiesService.findOneAndAssertOwner(facilityId, ownerId);
 
@@ -323,11 +325,28 @@ export class BookingsService {
     if (date) filter['date'] = date;
     if (status) filter['status'] = status;
 
-    return this.bookingModel
-      .find(filter)
-      .populate('userId', 'name phone avatar')
-      .sort({ date: 1, startTime: 1 })
-      .lean();
+    const skip = (page - 1) * limit;
+    const [rawBookings, total] = await Promise.all([
+      this.bookingModel
+        .find(filter)
+        .populate('userId', 'name phone avatar')
+        .sort({ date: 1, startTime: 1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      this.bookingModel.countDocuments(filter),
+    ]);
+
+    // Rename populated `userId` → `user` for frontend compatibility
+    const bookings = rawBookings.map((b: any) => {
+      const { userId, ...rest } = b;
+      return { ...rest, user: userId };
+    });
+
+    return {
+      bookings,
+      pagination: { page, limit, total, pages: Math.ceil(total / limit) },
+    };
   }
 
   // ─── Track WhatsApp share ──────────────────────────────────────────────────

@@ -8,7 +8,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuthStore } from '../../src/store/auth.store';
 import { Colors, Spacing, Radius } from '../../src/theme';
 
-export default function LoginScreen() {
+export default function OwnerLoginScreen() {
   const goBack = () => router.canGoBack() ? router.back() : router.replace('/(auth)/welcome');
 
   const [phone, setPhone]       = useState('+963');
@@ -27,7 +27,10 @@ export default function LoginScreen() {
       await login(phone, password);
       router.replace('/(tabs)');
     } catch (err: any) {
-      Alert.alert('خطأ في تسجيل الدخول', err?.response?.data?.message ?? 'رقم الهاتف أو كلمة المرور غير صحيحة');
+      const msg = err?.message === 'هذا الحساب ليس حساب مالك ملعب'
+        ? 'هذا الحساب مسجل كلاعب، يرجى استخدام تطبيق المستخدم'
+        : err?.response?.data?.message ?? 'رقم الهاتف أو كلمة المرور غير صحيحة';
+      Alert.alert('خطأ في تسجيل الدخول', msg);
     } finally {
       setLoading(false);
     }
@@ -35,28 +38,22 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Green header */}
       <View style={styles.header}>
         <SafeAreaView edges={['top']}>
           <TouchableOpacity onPress={goBack} style={styles.backBtn}>
             <Text style={styles.backText}>→ رجوع</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>تسجيل الدخول</Text>
-          <Text style={styles.headerSub}>مرحباً بعودتك!</Text>
+          <Text style={styles.headerSub}>بوابة أصحاب الملاعب</Text>
         </SafeAreaView>
       </View>
 
-      {/* White body */}
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.body}
-      >
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.body}>
         <ScrollView
           contentContainerStyle={styles.form}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Phone */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>رقم الهاتف</Text>
             <TextInput
@@ -74,7 +71,6 @@ export default function LoginScreen() {
             <Text style={styles.hint}>مثال: +963912345678</Text>
           </View>
 
-          {/* Password */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>كلمة المرور</Text>
             <View style={styles.passwordRow}>
@@ -96,7 +92,6 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          {/* Login button */}
           <TouchableOpacity
             style={[styles.submitBtn, !canSubmit && styles.submitBtnDisabled]}
             onPress={handleLogin}
@@ -108,11 +103,7 @@ export default function LoginScreen() {
             </Text>
           </TouchableOpacity>
 
-          {/* Register link */}
-          <TouchableOpacity
-            style={styles.switchRow}
-            onPress={() => router.replace('/(auth)/register')}
-          >
+          <TouchableOpacity style={styles.switchRow} onPress={() => router.replace('/(auth)/register')}>
             <Text style={styles.switchText}>
               ليس لديك حساب؟{' '}
               <Text style={styles.switchLink}>إنشاء حساب</Text>
@@ -132,8 +123,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl,
     paddingBottom: Spacing.xl + 24,
   },
-  backBtn: { paddingTop: Spacing.md, paddingBottom: Spacing.lg },
-  backText: { color: 'rgba(255,255,255,0.85)', fontSize: 15 },
+  backBtn:     { paddingTop: Spacing.md, paddingBottom: Spacing.lg },
+  backText:    { color: 'rgba(255,255,255,0.85)', fontSize: 15 },
   headerTitle: { color: '#FFFFFF', fontSize: 30, fontWeight: '800' },
   headerSub:   { color: 'rgba(255,255,255,0.8)', fontSize: 15, marginTop: 4 },
 
@@ -169,8 +160,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.brand.light,
   },
 
-  passwordRow: { flexDirection: 'row', alignItems: 'center' },
-  passwordInput: { flex: 1 },
+  passwordRow:  { flexDirection: 'row', alignItems: 'center' },
+  passwordInput:{ flex: 1 },
   eyeBtn: {
     position: 'absolute',
     left: Spacing.md,

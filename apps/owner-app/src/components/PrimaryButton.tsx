@@ -1,6 +1,5 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator, ViewStyle } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { Colors, Typography, Radius, Spacing } from '../theme';
 
@@ -22,55 +21,47 @@ export function PrimaryButton({
     onPress();
   };
 
-  if (variant === 'gradient') {
-    return (
-      <TouchableOpacity
-        onPress={handlePress}
-        disabled={disabled || loading}
-        activeOpacity={0.85}
-        style={[{ borderRadius: Radius.lg, overflow: 'hidden', opacity: disabled ? 0.5 : 1 }, style]}
-      >
-        <LinearGradient
-          colors={Colors.brand.gradient}
-          start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
-          style={styles.gradientInner}
-        >
-          {loading
-            ? <ActivityIndicator color="#fff" size="small" />
-            : <Text style={[Typography.labelLg, { color: '#fff' }]}>{label}</Text>}
-        </LinearGradient>
-      </TouchableOpacity>
-    );
-  }
+  const isOutline = variant === 'outline';
+  const isGhost   = variant === 'ghost';
 
   return (
     <TouchableOpacity
       onPress={handlePress}
       disabled={disabled || loading}
-      activeOpacity={0.8}
+      activeOpacity={0.85}
       style={[
-        styles.outlined,
-        variant === 'outline' && { borderColor: Colors.brand.primary, borderWidth: 1.5 },
-        { opacity: disabled ? 0.5 : 1 },
+        styles.base,
+        isOutline ? styles.outlined : isGhost ? styles.ghost : styles.solid,
+        { opacity: disabled ? 0.45 : 1 },
         style,
       ]}
     >
       {loading
-        ? <ActivityIndicator color={Colors.brand.primary} size="small" />
-        : <Text style={[Typography.labelLg, { color: Colors.brand.primary }]}>{label}</Text>}
+        ? <ActivityIndicator color={isOutline || isGhost ? Colors.brand.primary : '#fff'} size="small" />
+        : <Text style={[Typography.labelLg, { color: isOutline || isGhost ? Colors.brand.primary : '#fff' }]}>
+            {label}
+          </Text>}
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
-  gradientInner: {
-    paddingVertical: 16, paddingHorizontal: Spacing.xl,
-    alignItems: 'center', justifyContent: 'center',
+  base: {
+    paddingVertical: 16,
+    paddingHorizontal: Spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: Radius.lg,
+  },
+  solid: {
+    backgroundColor: Colors.brand.primary,
   },
   outlined: {
-    paddingVertical: 15, paddingHorizontal: Spacing.xl,
-    alignItems: 'center', justifyContent: 'center',
-    borderRadius: Radius.lg,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: Colors.brand.primary,
+  },
+  ghost: {
     backgroundColor: Colors.glass.subtle,
   },
 });

@@ -4,6 +4,7 @@ export const RegisterDto = z.object({
   name: z.string().min(2, 'الاسم مطلوب').max(50),
   phone: z.string().regex(/^\+963\d{9}$/, 'يجب أن يبدأ الرقم بـ +963'),
   password: z.string().min(6, 'كلمة المرور يجب أن تكون 6 أحرف على الأقل').max(100),
+  role: z.enum(['athlete', 'owner']).optional().default('athlete'),
   skillLevel: z.enum(['beginner', 'intermediate', 'pro']).optional(),
   preferredSports: z.array(z.enum(['football', 'basketball', 'tennis', 'volleyball', 'padel', 'squash', 'badminton', 'swimming'])).optional(),
 });

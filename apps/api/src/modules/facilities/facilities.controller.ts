@@ -15,6 +15,7 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { FacilitiesService } from './facilities.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -57,7 +58,7 @@ export class FacilitiesController {
   // ─── Owner-only endpoints ──────────────────────────────────────────────────
 
   @Post()
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('owner')
   @ApiBearerAuth()
   @ApiOperation({ summary: '[Owner] Create a new facility' })
@@ -67,7 +68,7 @@ export class FacilitiesController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('owner')
   @ApiBearerAuth()
   @ApiOperation({ summary: '[Owner] Update facility details' })
@@ -81,7 +82,7 @@ export class FacilitiesController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('owner')
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
@@ -91,7 +92,7 @@ export class FacilitiesController {
   }
 
   @Get('owner/my-facilities')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('owner')
   @ApiBearerAuth()
   @ApiOperation({ summary: '[Owner] List all my facilities' })

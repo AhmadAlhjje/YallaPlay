@@ -9,6 +9,7 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { AnalyticsService } from './analytics.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtPayloadType } from '@yallaplay/shared-types';
@@ -18,7 +19,7 @@ type Granularity = 'daily' | 'weekly' | 'monthly';
 // ─── Owner Analytics (/analytics/owner/*) ─────────────────────────────────────
 @ApiTags('Analytics — Owner')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('owner')
 @Controller('analytics/owner')
 export class OwnerAnalyticsController {
@@ -87,7 +88,7 @@ export class OwnerAnalyticsController {
 // ─── Admin Platform Analytics (/analytics/admin/*) ────────────────────────────
 @ApiTags('Analytics — Admin')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('admin')
 @Controller('analytics/admin')
 export class AdminAnalyticsController {

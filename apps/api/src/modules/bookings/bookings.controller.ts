@@ -15,6 +15,7 @@ import {
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { BookingsService } from './bookings.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -70,6 +71,7 @@ export class BookingsController {
   // ─── Owner endpoints ───────────────────────────────────────────────────────
 
   @Post('confirm-qr')
+  @UseGuards(RolesGuard)
   @Roles('owner')
   @ApiOperation({ summary: '[Owner] Confirm payment by validating QR token' })
   confirmByQr(@CurrentUser() user: JwtPayloadType, @Body('qrToken') qrToken: string) {
@@ -77,16 +79,19 @@ export class BookingsController {
   }
 
   @Get('facility/:facilityId')
+  @UseGuards(RolesGuard)
   @Roles('owner')
   @ApiOperation({ summary: '[Owner] List all bookings for a facility' })
   @ApiQuery({ name: 'date', required: false })
   @ApiQuery({ name: 'status', required: false })
+  @ApiQuery({ name: 'page', required: false })
   findByFacility(
     @Param('facilityId') facilityId: string,
     @CurrentUser() user: JwtPayloadType,
     @Query('date') date?: string,
     @Query('status') status?: string,
+    @Query('page') page?: string,
   ) {
-    return this.bookingsService.findByFacility(facilityId, user.sub, date, status);
+    return this.bookingsService.findByFacility(facilityId, user.sub, date, status, page ? Number(page) : 1);
   }
 }

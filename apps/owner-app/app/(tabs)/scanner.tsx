@@ -1,25 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, Alert, Animated, Easing,
+  View, Text, StyleSheet, TouchableOpacity, Animated, Easing, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingsApi } from '../../src/api/bookings.api';
-import { GlassCard } from '../../src/components/GlassCard';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
 
-type ScanState = 'idle' | 'scanning' | 'loading' | 'success' | 'error';
-
-const BOOKING_STATUS_LABELS: Record<string, string> = {
-  pending:   'معلّق',
-  confirmed: 'مؤكّد',
-  completed: 'مكتمل',
-  cancelled: 'ملغي',
-};
+type ScanState = 'idle' | 'loading' | 'success' | 'error';
 
 export default function ScannerTab() {
   const [permission, requestPermission] = useCameraPermissions();
@@ -30,7 +21,6 @@ export default function ScannerTab() {
   const scanLineAnim                    = useRef(new Animated.Value(0)).current;
   const qc                              = useQueryClient();
 
-  // Animate scan line
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -45,22 +35,21 @@ export default function ScannerTab() {
   const confirmMutation = useMutation({
     mutationFn: (qrToken: string) => bookingsApi.confirmQr(qrToken),
     onSuccess: (res) => {
-      const booking = res.data.data;
-      setConfirmedBooking(booking);
+      setConfirmedBooking(res.data.data);
       setScanState('success');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       qc.invalidateQueries({ queryKey: ['pending-bookings'] });
+      qc.invalidateQueries({ queryKey: ['owner-bookings'] });
     },
     onError: (err: any) => {
-      const msg = err?.response?.data?.message ?? 'رمز غير صحيح أو منتهي الصلاحية';
-      setErrorMsg(msg);
+      setErrorMsg(err?.response?.data?.message ?? 'رمز غير صحيح أو منتهي الصلاحية');
       setScanState('error');
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     },
   });
 
   const handleBarCodeScanned = ({ data }: { data: string }) => {
-    if (scanLockRef.current || scanState === 'loading') return;
+    if (scanLockRef.current || scanState !== 'idle') return;
     scanLockRef.current = true;
     setScanState('loading');
     confirmMutation.mutate(data);
@@ -76,21 +65,26 @@ export default function ScannerTab() {
   if (!permission) {
     return (
       <View style={[styles.container, styles.center]}>
-        <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>جاري التحقق من صلاحيات الكاميرا...</Text>
+        <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>جاري التحقق من الكاميرا...</Text>
       </View>
     );
   }
 
   if (!permission.granted) {
     return (
-      <View style={[styles.container, styles.center]}>
-        <Text style={{ fontSize: 52, marginBottom: Spacing.xl }}>📷</Text>
-        <Text style={[Typography.h3, { color: Colors.text.primary, textAlign: 'center', marginBottom: Spacing.md }]}>
-          الكاميرا مطلوبة لمسح QR
-        </Text>
-        <TouchableOpacity onPress={requestPermission} style={styles.permBtn}>
-          <Text style={[Typography.labelLg, { color: Colors.brand.primary }]}>منح الإذن</Text>
-        </TouchableOpacity>
+      <View style={[styles.container, styles.center, { backgroundColor: Colors.background.primary }]}>
+        <SafeAreaView style={{ alignItems: 'center', paddingHorizontal: Spacing.xl }}>
+          <Text style={{ fontSize: 64, marginBottom: Spacing.xl }}>📷</Text>
+          <Text style={[Typography.h2, { color: Colors.text.primary, textAlign: 'center', marginBottom: Spacing.md }]}>
+            الكاميرا مطلوبة
+          </Text>
+          <Text style={[Typography.bodyMd, { color: Colors.text.secondary, textAlign: 'center', marginBottom: Spacing.xl }]}>
+            نحتاج إذن الكاميرا لمسح رموز QR الخاصة بالحجوزات
+          </Text>
+          <TouchableOpacity onPress={requestPermission} style={styles.permBtn}>
+            <Text style={[Typography.labelLg, { color: '#fff' }]}>السماح بالكاميرا</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
       </View>
     );
   }
@@ -99,22 +93,77 @@ export default function ScannerTab() {
     inputRange: [0, 1], outputRange: [0, 220],
   });
 
+  // Show result screens on white background
+  if (scanState === 'success' && confirmedBooking) {
+    return (
+      <View style={[styles.container, { backgroundColor: Colors.background.primary }]}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={styles.resultPage}>
+            <View style={[styles.resultIconCircle, { backgroundColor: Colors.successBg, borderColor: Colors.success + '44' }]}>
+              <Text style={{ fontSize: 52 }}>✅</Text>
+            </View>
+            <Text style={[Typography.h1, { color: Colors.success, marginTop: Spacing.xl, textAlign: 'center' }]}>
+              تم التأكيد بنجاح!
+            </Text>
+            <Text style={[Typography.bodyMd, { color: Colors.text.tertiary, textAlign: 'center', marginTop: 4 }]}>
+              تم تأكيد الحجز وإشعار اللاعب
+            </Text>
+
+            <View style={styles.bookingCard}>
+              <BookingRow icon="👤" label="اللاعب"  value={confirmedBooking.user?.name ?? '—'} />
+              <BookingRow icon="📱" label="الجوال"  value={confirmedBooking.user?.phone ?? '—'} />
+              <BookingRow icon="📅" label="التاريخ" value={confirmedBooking.date ?? '—'} />
+              <BookingRow icon="🕐" label="الوقت"   value={`${confirmedBooking.startTime ?? ''} – ${confirmedBooking.endTime ?? ''}`} />
+              <BookingRow icon="💰" label="المبلغ"  value={`${confirmedBooking.price ?? 0} ل.س`} last />
+            </View>
+
+            <TouchableOpacity onPress={resetScanner} style={styles.scanAgainBtn}>
+              <Text style={[Typography.labelLg, { color: '#fff' }]}>📱 مسح حجز آخر</Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
+  if (scanState === 'error') {
+    return (
+      <View style={[styles.container, { backgroundColor: Colors.background.primary }]}>
+        <SafeAreaView style={{ flex: 1 }}>
+          <View style={styles.resultPage}>
+            <View style={[styles.resultIconCircle, { backgroundColor: Colors.errorBg, borderColor: Colors.error + '44' }]}>
+              <Text style={{ fontSize: 52 }}>❌</Text>
+            </View>
+            <Text style={[Typography.h1, { color: Colors.error, marginTop: Spacing.xl, textAlign: 'center' }]}>
+              فشل التأكيد
+            </Text>
+            <Text style={[Typography.bodyMd, { color: Colors.text.secondary, textAlign: 'center', marginTop: Spacing.sm, marginBottom: Spacing.xl }]}>
+              {errorMsg}
+            </Text>
+            <TouchableOpacity onPress={resetScanner} style={[styles.scanAgainBtn, { backgroundColor: Colors.glass.medium }]}>
+              <Text style={[Typography.labelLg, { color: Colors.text.primary }]}>حاول مجدداً</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      {/* Camera fills screen */}
       <CameraView
         style={StyleSheet.absoluteFill}
         barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
         onBarcodeScanned={scanState === 'idle' ? handleBarCodeScanned : undefined}
       />
 
-      {/* Dark overlay with cutout */}
+      {/* Dark overlay */}
       <View style={styles.overlay}>
-        <LinearGradient colors={['rgba(10,14,26,0.85)', 'transparent']} style={styles.topGradient} />
+        <LinearGradient colors={['rgba(0,0,0,0.75)', 'transparent']} style={styles.topGradient} />
 
         <SafeAreaView style={styles.topBar}>
-          <Text style={[Typography.h3, { color: '#fff' }]}>مسح رمز QR</Text>
-          <Text style={[Typography.bodyMd, { color: 'rgba(255,255,255,0.7)' }]}>
+          <Text style={[Typography.h3, { color: '#fff', textAlign: 'center' }]}>مسح رمز QR</Text>
+          <Text style={[Typography.bodyMd, { color: 'rgba(255,255,255,0.75)', textAlign: 'center', marginTop: 4 }]}>
             وجّه الكاميرا نحو رمز الحجز
           </Text>
         </SafeAreaView>
@@ -122,22 +171,17 @@ export default function ScannerTab() {
         {/* Viewfinder */}
         <View style={styles.viewfinderWrapper}>
           <View style={styles.viewfinder}>
-            {/* Corner marks */}
             <View style={[styles.corner, styles.cornerTL]} />
             <View style={[styles.corner, styles.cornerTR]} />
             <View style={[styles.corner, styles.cornerBL]} />
             <View style={[styles.corner, styles.cornerBR]} />
 
-            {/* Scan line */}
             {scanState === 'idle' && (
-              <Animated.View
-                style={[styles.scanLine, { transform: [{ translateY: scanLineY }] }]}
-              />
+              <Animated.View style={[styles.scanLine, { transform: [{ translateY: scanLineY }] }]} />
             )}
 
-            {/* Loading state */}
             {scanState === 'loading' && (
-              <View style={styles.scanStateOverlay}>
+              <View style={styles.loadingOverlay}>
                 <Text style={{ fontSize: 40 }}>⏳</Text>
                 <Text style={[Typography.labelLg, { color: '#fff', marginTop: Spacing.md }]}>جاري التحقق...</Text>
               </View>
@@ -145,64 +189,16 @@ export default function ScannerTab() {
           </View>
         </View>
 
-        <LinearGradient colors={['transparent', 'rgba(10,14,26,0.9)']} style={styles.bottomGradient} />
+        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.75)']} style={styles.bottomGradient} />
       </View>
-
-      {/* Success Sheet */}
-      {scanState === 'success' && confirmedBooking && (
-        <View style={styles.resultSheet}>
-          <BlurView intensity={80} style={StyleSheet.absoluteFill} />
-          <View style={styles.resultContent}>
-            <View style={[styles.resultIcon, { backgroundColor: Colors.successBg }]}>
-              <Text style={{ fontSize: 40 }}>✅</Text>
-            </View>
-            <Text style={[Typography.h2, { color: Colors.success, marginTop: Spacing.lg }]}>تم التأكيد!</Text>
-
-            <GlassCard style={styles.bookingCard}>
-              <BookingDetail icon="👤" label="اللاعب"  value={confirmedBooking.user?.name ?? '—'} />
-              <BookingDetail icon="📅" label="التاريخ" value={confirmedBooking.date} />
-              <BookingDetail icon="🕐" label="الوقت"   value={`${confirmedBooking.startTime} – ${confirmedBooking.endTime}`} />
-              <BookingDetail icon="💵" label="السعر"   value={`${confirmedBooking.price} ر.س`} />
-              <BookingDetail icon="💳" label="الدفع"   value={confirmedBooking.paymentMethod === 'cash' ? 'كاش' : confirmedBooking.paymentMethod} />
-            </GlassCard>
-
-            <TouchableOpacity onPress={resetScanner} style={styles.scanAgainBtn}>
-              <LinearGradient colors={Colors.brand.gradient} style={styles.scanAgainGrad}>
-                <Text style={[Typography.labelLg, { color: '#fff' }]}>مسح حجز آخر</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
-
-      {/* Error Sheet */}
-      {scanState === 'error' && (
-        <View style={styles.resultSheet}>
-          <BlurView intensity={80} style={StyleSheet.absoluteFill} />
-          <View style={styles.resultContent}>
-            <View style={[styles.resultIcon, { backgroundColor: Colors.errorBg }]}>
-              <Text style={{ fontSize: 40 }}>❌</Text>
-            </View>
-            <Text style={[Typography.h2, { color: Colors.error, marginTop: Spacing.lg }]}>فشل التأكيد</Text>
-            <Text style={[Typography.bodyMd, { color: Colors.text.secondary, textAlign: 'center', marginTop: Spacing.sm }]}>
-              {errorMsg}
-            </Text>
-            <TouchableOpacity onPress={resetScanner} style={[styles.scanAgainBtn, { marginTop: Spacing.xl }]}>
-              <View style={[styles.scanAgainGrad, { backgroundColor: Colors.glass.medium }]}>
-                <Text style={[Typography.labelLg, { color: Colors.text.primary }]}>حاول مجدداً</Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </View>
-      )}
     </View>
   );
 }
 
-function BookingDetail({ icon, label, value }: { icon: string; label: string; value: string }) {
+function BookingRow({ icon, label, value, last }: { icon: string; label: string; value: string; last?: boolean }) {
   return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }}>
-      <Text style={[Typography.bodyMd, { color: Colors.text.tertiary }]}>{icon} {label}</Text>
+    <View style={[styles.bookingRow, !last && { borderBottomWidth: 1, borderBottomColor: Colors.glass.border }]}>
+      <Text style={[Typography.bodyMd, { color: Colors.text.tertiary }]}>{icon}  {label}</Text>
       <Text style={[Typography.labelMd, { color: Colors.text.primary }]}>{value}</Text>
     </View>
   );
@@ -214,54 +210,64 @@ const CORNER_WIDTH = 4;
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#000' },
-  center: { alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.background.primary },
-  overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
-  topGradient: { position: 'absolute', top: 0, left: 0, right: 0, height: 160 },
+  center:    { alignItems: 'center', justifyContent: 'center' },
+  overlay:   { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
+  topGradient:    { position: 'absolute', top: 0, left: 0, right: 0, height: 180 },
   bottomGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 200 },
-  topBar: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', paddingTop: 60 },
+  topBar: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center', paddingTop: 60, paddingHorizontal: Spacing.xl },
   viewfinderWrapper: { alignItems: 'center', justifyContent: 'center' },
   viewfinder: {
     width: VIEWFINDER_SIZE, height: VIEWFINDER_SIZE,
-    backgroundColor: 'transparent',
-    overflow: 'hidden',
+    backgroundColor: 'transparent', overflow: 'hidden',
   },
   corner: {
     position: 'absolute', width: CORNER_SIZE, height: CORNER_SIZE,
     borderColor: Colors.brand.primary,
   },
-  cornerTL: { top: 0, left: 0, borderTopWidth: CORNER_WIDTH, borderLeftWidth: CORNER_WIDTH, borderTopLeftRadius: 4 },
-  cornerTR: { top: 0, right: 0, borderTopWidth: CORNER_WIDTH, borderRightWidth: CORNER_WIDTH, borderTopRightRadius: 4 },
-  cornerBL: { bottom: 0, left: 0, borderBottomWidth: CORNER_WIDTH, borderLeftWidth: CORNER_WIDTH, borderBottomLeftRadius: 4 },
-  cornerBR: { bottom: 0, right: 0, borderBottomWidth: CORNER_WIDTH, borderRightWidth: CORNER_WIDTH, borderBottomRightRadius: 4 },
+  cornerTL: { top: 0,    left: 0,   borderTopWidth: CORNER_WIDTH,    borderLeftWidth: CORNER_WIDTH,  borderTopLeftRadius: 4 },
+  cornerTR: { top: 0,    right: 0,  borderTopWidth: CORNER_WIDTH,    borderRightWidth: CORNER_WIDTH, borderTopRightRadius: 4 },
+  cornerBL: { bottom: 0, left: 0,   borderBottomWidth: CORNER_WIDTH, borderLeftWidth: CORNER_WIDTH,  borderBottomLeftRadius: 4 },
+  cornerBR: { bottom: 0, right: 0,  borderBottomWidth: CORNER_WIDTH, borderRightWidth: CORNER_WIDTH, borderBottomRightRadius: 4 },
   scanLine: {
     position: 'absolute', left: 0, right: 0, height: 2,
     backgroundColor: Colors.brand.primary,
     shadowColor: Colors.brand.primary,
-    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.8, shadowRadius: 6,
+    shadowOffset: { width: 0, height: 0 }, shadowOpacity: 0.9, shadowRadius: 8,
   },
-  scanStateOverlay: {
+  loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(10,14,26,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     alignItems: 'center', justifyContent: 'center',
   },
   permBtn: {
-    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
-    borderRadius: Radius.lg, borderWidth: 1.5,
-    borderColor: Colors.brand.primary, backgroundColor: Colors.brand.primary + '18',
+    backgroundColor: Colors.brand.primary,
+    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.lg,
+    borderRadius: Radius.lg,
   },
-  resultSheet: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    borderTopLeftRadius: 28, borderTopRightRadius: 28,
-    overflow: 'hidden',
-    borderTopWidth: 1, borderTopColor: Colors.glass.border,
-    maxHeight: '80%',
+  resultPage: {
+    flex: 1, alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: Spacing.xl, paddingVertical: Spacing.xl,
   },
-  resultContent: { padding: Spacing.xl, alignItems: 'center' },
-  resultIcon: {
-    width: 80, height: 80, borderRadius: 40,
+  resultIconCircle: {
+    width: 100, height: 100, borderRadius: 50,
     alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1,
   },
-  bookingCard: { width: '100%', padding: Spacing.lg, marginTop: Spacing.xl },
-  scanAgainBtn: { width: '100%', marginTop: Spacing.lg, borderRadius: Radius.lg, overflow: 'hidden' },
-  scanAgainGrad: { paddingVertical: 16, alignItems: 'center' },
+  bookingCard: {
+    width: '100%', marginTop: Spacing.xl,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: Radius.xl,
+    borderWidth: 1, borderColor: Colors.glass.border,
+    overflow: 'hidden',
+  },
+  bookingRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
+  },
+  scanAgainBtn: {
+    width: '100%', marginTop: Spacing.xl,
+    backgroundColor: Colors.brand.primary,
+    borderRadius: Radius.lg, paddingVertical: Spacing.lg,
+    alignItems: 'center',
+  },
 });

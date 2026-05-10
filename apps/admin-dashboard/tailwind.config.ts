@@ -10,9 +10,9 @@ const config: Config = {
       colors: {
         // ── Canvas ──────────────────────────────────────────────────
         canvas: {
-          primary:   '#0A0E1A',
-          secondary: '#0F1428',
-          elevated:  '#141830',
+          primary:   '#0A120D',
+          secondary: '#0D1A10',
+          elevated:  '#112016',
         },
         // ── Glass surfaces ──────────────────────────────────────────
         glass: {
@@ -24,9 +24,9 @@ const config: Config = {
         },
         // ── Brand ───────────────────────────────────────────────────
         brand: {
-          primary:   '#4F46E5',
-          secondary: '#7C3AED',
-          glow:      'rgba(79,70,229,0.35)',
+          primary:   '#16A34A',
+          secondary: '#15803D',
+          glow:      'rgba(22,163,74,0.35)',
         },
         // ── Status ──────────────────────────────────────────────────
         status: {
@@ -43,8 +43,8 @@ const config: Config = {
         glass: '12px',
       },
       backgroundImage: {
-        'brand-gradient': 'linear-gradient(135deg, #4F46E5, #7C3AED)',
-        'canvas-gradient': 'radial-gradient(ellipse at top, #0D1535 0%, #0A0E1A 60%)',
+        'brand-gradient': 'linear-gradient(135deg, #16A34A, #15803D)',
+        'canvas-gradient': 'radial-gradient(ellipse at top, #0D2010 0%, #0A120D 60%)',
       },
       animation: {
         'shimmer': 'shimmer 2s linear infinite',

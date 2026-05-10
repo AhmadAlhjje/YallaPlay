@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Switch,
+  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Switch, ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,7 +37,6 @@ const DEFAULT_HOURS = DAYS.reduce((acc, d) => ({
 
 export default function FacilityEditScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const isNew = id === 'new';
   const qc = useQueryClient();
 
   const [name, setName]               = useState('');
@@ -52,36 +51,39 @@ export default function FacilityEditScreen() {
   const [longitude, setLongitude]     = useState('');
   const [maxPlayers, setMaxPlayers]   = useState('');
 
-  const { isLoading: facilityLoading } = useQuery({
+  const { data: facilityRes, isLoading: facilityLoading } = useQuery({
     queryKey: ['facility', id],
     queryFn: () => facilitiesApi.getById(id),
-    enabled: !isNew,
     staleTime: 300_000,
-    select: (res) => {
-      const f = res.data?.data;
-      if (!f) return f;
-      // Populate form
-      setName(f.name ?? '');
-      setAddress(f.address ?? '');
-      setPhone(f.phone ?? '');
-      setDescription(f.description ?? '');
-      setPricePerHour(String(f.pricePerHour ?? ''));
-      setSlotDuration(String(f.slotDurationMinutes ?? 60));
-      setSports(f.sport ?? []);
-      setMaxPlayers(String(f.maxPlayersPerSlot ?? ''));
-      if (f.operatingHours) setHours(f.operatingHours);
-      if (f.location?.coordinates) {
-        setLongitude(String(f.location.coordinates[0]));
-        setLatitude(String(f.location.coordinates[1]));
-      }
-      return f;
-    },
   });
 
+  useEffect(() => {
+    const f = facilityRes?.data?.data;
+    if (!f) return;
+    setName(f.name ?? '');
+    setAddress(f.address ?? '');
+    setPhone(f.phone ?? '');
+    setDescription(f.description ?? '');
+    setPricePerHour(String(f.pricePerSlot ?? f.pricePerHour ?? ''));
+    setSlotDuration(String(f.slotDurationMinutes ?? 60));
+    setSports(f.sports ?? f.sport ?? []);
+    if (f.operatingHours) {
+      const mapped = { ...DEFAULT_HOURS };
+      for (const [day, val] of Object.entries(f.operatingHours)) {
+        mapped[day] = val === null
+          ? { open: '06:00', close: '23:00', isClosed: true }
+          : { open: (val as any).open, close: (val as any).close, isClosed: false };
+      }
+      setHours(mapped);
+    }
+    if (f.location?.coordinates) {
+      setLongitude(String(f.location.coordinates[0]));
+      setLatitude(String(f.location.coordinates[1]));
+    }
+  }, [facilityRes]);
+
   const saveMutation = useMutation({
-    mutationFn: (dto: any) => isNew
-      ? facilitiesApi.create(dto)
-      : facilitiesApi.update(id, dto),
+    mutationFn: (dto: any) => facilitiesApi.update(id, dto),
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       qc.invalidateQueries({ queryKey: ['owner-facilities'] });
@@ -96,16 +98,21 @@ export default function FacilityEditScreen() {
     if (!pricePerHour || isNaN(Number(pricePerHour))) { Alert.alert('', 'السعر غير صحيح'); return; }
     if (sports.length === 0) { Alert.alert('', 'اختر رياضة واحدة على الأقل'); return; }
 
+    // Transform hours: isClosed:true → null (as backend expects)
+    const operatingHours: Record<string, { open: string; close: string } | null> = {};
+    for (const [day, val] of Object.entries(hours)) {
+      operatingHours[day] = val.isClosed ? null : { open: val.open, close: val.close };
+    }
+
     const dto: any = {
       name: name.trim(),
       address: address.trim(),
       phone: phone.trim() || undefined,
       description: description.trim() || undefined,
-      pricePerHour: Number(pricePerHour),
+      pricePerSlot: Number(pricePerHour),
       slotDurationMinutes: Number(slotDuration),
-      sport: sports,
-      operatingHours: hours,
-      maxPlayersPerSlot: maxPlayers ? Number(maxPlayers) : undefined,
+      sports,
+      operatingHours,
     };
 
     if (latitude && longitude) {
@@ -127,7 +134,7 @@ export default function FacilityEditScreen() {
   if (facilityLoading) {
     return (
       <View style={[styles.container, styles.center]}>
-        <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>جاري التحميل...</Text>
+        <ActivityIndicator color={Colors.brand.primary} />
       </View>
     );
   }
@@ -139,9 +146,7 @@ export default function FacilityEditScreen() {
           <TouchableOpacity onPress={() => router.back()}>
             <Text style={[Typography.bodyLg, { color: Colors.text.secondary }]}>← رجوع</Text>
           </TouchableOpacity>
-          <Text style={[Typography.h3, { color: Colors.text.primary }]}>
-            {isNew ? 'ملعب جديد' : 'تعديل الملعب'}
-          </Text>
+          <Text style={[Typography.h3, { color: Colors.text.primary }]}>تعديل الملعب</Text>
           <View style={{ width: 50 }} />
         </View>
 
@@ -154,7 +159,7 @@ export default function FacilityEditScreen() {
             <Divider />
             <Field label="العنوان *" value={address} onChangeText={setAddress} placeholder="الحي، المدينة" />
             <Divider />
-            <Field label="رقم الجوال" value={phone} onChangeText={setPhone} placeholder="+966XXXXXXXXX" keyboardType="phone-pad" />
+            <Field label="رقم الجوال" value={phone} onChangeText={setPhone} placeholder="+963XXXXXXXXX" keyboardType="phone-pad" />
             <Divider />
             <Field label="وصف الملعب" value={description} onChangeText={setDescription} placeholder="وصف مختصر..." multiline />
           </GlassCard>
@@ -162,7 +167,7 @@ export default function FacilityEditScreen() {
           {/* Pricing */}
           <SectionTitle title="التسعير والمدة" />
           <GlassCard style={styles.fieldCard}>
-            <Field label="السعر لكل ساعة (ر.س) *" value={pricePerHour} onChangeText={setPricePerHour} keyboardType="numeric" placeholder="150" />
+            <Field label="السعر لكل ساعة (ل.س) *" value={pricePerHour} onChangeText={setPricePerHour} keyboardType="numeric" placeholder="5000" />
             <Divider />
             <View style={styles.fieldRow}>
               <Text style={[Typography.labelMd, { color: Colors.text.secondary, flex: 1 }]}>مدة الوقت (دقيقة)</Text>
@@ -255,7 +260,7 @@ export default function FacilityEditScreen() {
           </GlassCard>
 
           <PrimaryButton
-            label={saveMutation.isPending ? 'جاري الحفظ...' : isNew ? 'إضافة الملعب' : 'حفظ التغييرات'}
+            label={saveMutation.isPending ? 'جاري الحفظ...' : 'حفظ التغييرات'}
             onPress={handleSave}
             loading={saveMutation.isPending}
             style={{ marginTop: Spacing.xl }}

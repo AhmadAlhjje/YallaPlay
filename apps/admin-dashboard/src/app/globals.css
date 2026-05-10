@@ -6,12 +6,12 @@
 
 @layer base {
   :root {
-    --canvas-primary:   #0A0E1A;
-    --canvas-secondary: #0F1428;
-    --canvas-elevated:  #141830;
-    --brand-primary:    #4F46E5;
-    --brand-secondary:  #7C3AED;
-    --brand-glow:       rgba(79, 70, 229, 0.35);
+    --canvas-primary:   #0A120D;
+    --canvas-secondary: #0D1A10;
+    --canvas-elevated:  #112016;
+    --brand-primary:    #16A34A;
+    --brand-secondary:  #15803D;
+    --brand-glow:       rgba(22, 163, 74, 0.35);
     --glass-border:     rgba(255, 255, 255, 0.12);
     --glass-highlight:  rgba(255, 255, 255, 0.06);
     --text-primary:     #F9FAFB;
@@ -67,11 +67,12 @@
   /* ── Brand Button ───────────────────────────────────────────── */
   .btn-brand {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm text-white transition-all duration-150;
-    background: linear-gradient(135deg, #4F46E5, #7C3AED);
-    box-shadow: 0 0 20px rgba(79,70,229,0.25);
+    background: #16A34A;
+    box-shadow: 0 0 20px rgba(22,163,74,0.25);
   }
   .btn-brand:hover {
-    box-shadow: 0 0 28px rgba(79,70,229,0.4);
+    background: #15803D;
+    box-shadow: 0 0 28px rgba(22,163,74,0.4);
     transform: translateY(-1px);
   }
   .btn-brand:active { transform: translateY(0); }
@@ -121,7 +122,7 @@
     border: 1px solid rgba(255,255,255,0.12);
   }
   .field-input::placeholder { color: var(--text-tertiary); }
-  .field-input:focus { border-color: rgba(79,70,229,0.6); box-shadow: 0 0 0 3px rgba(79,70,229,0.12); }
+  .field-input:focus { border-color: rgba(22,163,74,0.6); box-shadow: 0 0 0 3px rgba(22,163,74,0.12); }
 
   .field-select {
     @apply field-input appearance-none cursor-pointer;
@@ -140,19 +141,19 @@
   .nav-link:hover { @apply text-[--text-primary] bg-white/5; }
   .nav-link.active {
     @apply text-[--text-primary] bg-brand-primary/15 border border-brand-primary/25;
-    text-shadow: 0 0 20px rgba(79,70,229,0.5);
+    text-shadow: 0 0 20px rgba(22,163,74,0.5);
   }
   .nav-link.active .nav-icon { color: var(--brand-primary); }
 }
 
 @layer utilities {
   .text-gradient {
-    background: linear-gradient(135deg, #818CF8, #C084FC);
+    background: linear-gradient(135deg, #4ADE80, #16A34A);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-  .glow-brand { box-shadow: 0 0 30px rgba(79,70,229,0.3); }
+  .glow-brand { box-shadow: 0 0 30px rgba(22,163,74,0.3); }
   .border-glass { border: 1px solid rgba(255,255,255,0.12); }
   .bg-elevated { background-color: var(--canvas-elevated); }
   .bg-canvas { background-color: var(--canvas-primary); }

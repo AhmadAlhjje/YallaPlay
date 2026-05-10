@@ -69,7 +69,7 @@ export class AuthService {
         passwordHash,
         skillLevel: dto.skillLevel ?? 'beginner',
         preferredSports: dto.preferredSports ?? [],
-        role: 'athlete',
+        role: dto.role ?? 'athlete',
       });
     }
 
