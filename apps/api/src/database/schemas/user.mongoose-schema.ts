@@ -45,6 +45,10 @@ export class User {
   @Prop({ type: [String], default: [] })
   deviceTokens: string[];
 
+  // Password auth
+  @Prop({ select: false })
+  passwordHash?: string;
+
   // OTP fields — not exposed in API responses
   @Prop({ select: false })
   otpHash?: string;
@@ -66,6 +70,7 @@ UserSchema.index({ role: 1, isActive: 1 });
 // Never return sensitive fields in normal queries
 UserSchema.set('toJSON', {
   transform: (_doc, ret) => {
+    delete ret.passwordHash;
     delete ret.otpHash;
     delete ret.otpExpiresAt;
     delete ret.refreshTokenHash;

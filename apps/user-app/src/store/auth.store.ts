@@ -23,6 +23,8 @@ interface AuthState {
 
   // Actions
   initialize: () => Promise<void>;
+  register: (name: string, phone: string, password: string, skillLevel?: string, preferredSports?: string[]) => Promise<void>;
+  login: (phone: string, password: string) => Promise<void>;
   sendOtp: (phone: string) => Promise<void>;
   verifyOtp: (phone: string, otp: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -53,6 +55,20 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       await clearTokens();
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
+  },
+
+  register: async (name, phone, password, skillLevel, preferredSports) => {
+    const { data } = await authApi.register({ name, phone, password, skillLevel, preferredSports });
+    const { accessToken, refreshToken, user, isNewUser } = data.data;
+    await saveTokens(accessToken, refreshToken);
+    set({ user, isAuthenticated: true, isNewUser: !!isNewUser });
+  },
+
+  login: async (phone, password) => {
+    const { data } = await authApi.login({ phone, password });
+    const { accessToken, refreshToken, user, isNewUser } = data.data;
+    await saveTokens(accessToken, refreshToken);
+    set({ user, isAuthenticated: true, isNewUser: !!isNewUser });
   },
 
   sendOtp: async (phone: string) => {

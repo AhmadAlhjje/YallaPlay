@@ -48,11 +48,11 @@ export const UpdateFacilityDto = CreateFacilityDto.partial();
 export const FacilitySearchDto = z.object({
   query: z.string().optional(),
   sport: z.enum(SportType).optional(),
-  longitude: z.number().optional(),
-  latitude: z.number().optional(),
-  radiusKm: z.number().positive().max(50).default(10),
-  page: z.number().int().positive().default(1),
-  limit: z.number().int().positive().max(50).default(20),
+  longitude: z.coerce.number().optional(),
+  latitude: z.coerce.number().optional(),
+  radiusKm: z.coerce.number().positive().max(50).default(10),
+  page: z.coerce.number().int().positive().default(1),
+  limit: z.coerce.number().int().positive().max(50).default(20),
   sortBy: z.enum(['nearest', 'popular', 'rating', 'price_asc', 'price_desc']).default('popular'),
 });
 

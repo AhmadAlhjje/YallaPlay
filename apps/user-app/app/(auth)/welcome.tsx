@@ -1,102 +1,184 @@
 import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { PrimaryButton } from '../../src/components/PrimaryButton';
-import { Colors, Typography, Spacing, Radius } from '../../src/theme';
+import { Colors, Spacing, Radius } from '../../src/theme';
 
 const { height } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safe}>
-        {/* Logo / Brand */}
-        <View style={styles.logoSection}>
-          <View style={styles.logoIcon}>
-            <Text style={{ fontSize: 48 }}>⚽</Text>
+      {/* Green top section */}
+      <View style={styles.hero}>
+        <SafeAreaView edges={['top']} style={styles.heroInner}>
+          <View style={styles.logoBox}>
+            <Text style={styles.logoEmoji}>⚽</Text>
           </View>
-          <Text style={[Typography.displayLg, styles.appName]}>يلا بلاي</Text>
-          <Text style={[Typography.bodyLg, styles.tagline]}>
-            احجز ملعبك المفضل في ثوانٍ
-          </Text>
-        </View>
+          <Text style={styles.appName}>يلا بلاي</Text>
+          <Text style={styles.tagline}>احجز ملعبك المفضل في ثوانٍ</Text>
 
-        {/* Feature pills */}
-        <View style={styles.features}>
-          {[
-            { icon: '🏟', text: 'ملاعب قريبة منك' },
-            { icon: '⚡', text: 'حجز فوري بنقرة واحدة' },
-            { icon: '🏆', text: 'نقاط مكافآت مع كل حجز' },
-          ].map((f) => (
-            <View key={f.text} style={styles.featurePill}>
-              <Text style={{ fontSize: 20 }}>{f.icon}</Text>
-              <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>{f.text}</Text>
-            </View>
-          ))}
-        </View>
+          <View style={styles.featureRow}>
+            {[
+              { icon: '🏟', label: 'ملاعب قريبة' },
+              { icon: '⚡', label: 'حجز فوري' },
+              { icon: '🏆', label: 'نقاط مكافآت' },
+            ].map((f) => (
+              <View key={f.label} style={styles.featureChip}>
+                <Text style={styles.featureIcon}>{f.icon}</Text>
+                <Text style={styles.featureLabel}>{f.label}</Text>
+              </View>
+            ))}
+          </View>
+        </SafeAreaView>
+      </View>
 
-        {/* CTAs */}
-        <View style={styles.ctas}>
-          <PrimaryButton
-            label="ابدأ الآن"
-            onPress={() => router.push('/(auth)/phone')}
-            style={styles.cta}
-          />
-          <Text style={[Typography.bodySm, styles.terms]}>
+      {/* White bottom section */}
+      <View style={styles.bottom}>
+        <SafeAreaView edges={['bottom']} style={styles.bottomInner}>
+          <Text style={styles.welcomeText}>مرحباً بك</Text>
+          <Text style={styles.welcomeSub}>سجّل دخولك أو أنشئ حساباً جديداً للبدء</Text>
+
+          <TouchableOpacity
+            style={styles.loginBtn}
+            onPress={() => router.push('/(auth)/login')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.loginBtnText}>تسجيل الدخول</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.registerBtn}
+            onPress={() => router.push('/(auth)/register')}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.registerBtnText}>إنشاء حساب جديد</Text>
+          </TouchableOpacity>
+
+          <Text style={styles.terms}>
             بالمتابعة توافق على{' '}
             <Text style={{ color: Colors.brand.primary }}>شروط الاستخدام</Text>
           </Text>
-        </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background.primary },
-  safe: { flex: 1, justifyContent: 'space-between', paddingHorizontal: Spacing.xl },
-  logoSection: {
-    alignItems: 'center',
-    paddingTop: height * 0.1,
+  container: { flex: 1, backgroundColor: Colors.brand.primary },
+
+  // ── Green hero ─────────────────────────────────────────────
+  hero: {
+    backgroundColor: Colors.brand.primary,
+    height: height * 0.52,
   },
-  logoIcon: {
-    width: 90,
-    height: 90,
-    borderRadius: 28,
-    backgroundColor: Colors.brand.light,
-    borderWidth: 2,
-    borderColor: Colors.brand.border,
+  heroInner: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    gap: Spacing.md,
   },
+  logoBox: {
+    width: 88,
+    height: 88,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  logoEmoji: { fontSize: 48 },
   appName: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+  },
+  tagline: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.85)',
+    textAlign: 'center',
+  },
+  featureRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.sm,
+  },
+  featureChip: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: Radius.full,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  featureIcon: { fontSize: 14 },
+  featureLabel: { fontSize: 12, color: '#FFFFFF', fontWeight: '600' },
+
+  // ── White bottom ───────────────────────────────────────────
+  bottom: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    marginTop: -24,
+  },
+  bottomInner: {
+    flex: 1,
+    paddingHorizontal: Spacing.xl,
+    paddingTop: Spacing.xl + 8,
+    gap: Spacing.md,
+  },
+  welcomeText: {
+    fontSize: 24,
+    fontWeight: '700',
     color: Colors.text.primary,
     textAlign: 'center',
   },
-  tagline: {
+  welcomeSub: {
+    fontSize: 14,
     color: Colors.text.secondary,
     textAlign: 'center',
-    marginTop: Spacing.sm,
+    marginBottom: Spacing.sm,
   },
-  features: {
-    gap: Spacing.md,
-  },
-  featurePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.md,
-    backgroundColor: Colors.background.secondary,
-    borderWidth: 1,
-    borderColor: Colors.border.default,
+
+  loginBtn: {
+    backgroundColor: Colors.brand.primary,
     borderRadius: Radius.lg,
-    padding: Spacing.lg,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  ctas: { paddingBottom: Spacing.xl },
-  cta: { marginBottom: Spacing.md },
+  loginBtnText: {
+    color: '#FFFFFF',
+    fontSize: 17,
+    fontWeight: '700',
+  },
+
+  registerBtn: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.lg,
+    height: 54,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.brand.primary,
+  },
+  registerBtnText: {
+    color: Colors.brand.primary,
+    fontSize: 17,
+    fontWeight: '600',
+  },
+
   terms: {
+    fontSize: 12,
     color: Colors.text.tertiary,
     textAlign: 'center',
+    marginTop: 4,
   },
 });

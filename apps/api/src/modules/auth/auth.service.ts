@@ -11,7 +11,7 @@ import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from '../../database/schemas/user.mongoose-schema';
-import { SendOtpDtoType, VerifyOtpDtoType, JwtPayloadType } from '@yallaplay/shared-types';
+import { RegisterDtoType, LoginDtoType, SendOtpDtoType, VerifyOtpDtoType, JwtPayloadType } from '@yallaplay/shared-types';
 import { WhatsappService } from './whatsapp.service';
 
 @Injectable()
@@ -27,6 +27,87 @@ export class AuthService {
     private config: ConfigService,
     private whatsapp: WhatsappService,
   ) {}
+
+  async register(dto: RegisterDtoType): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: Partial<UserDocument>;
+    isNewUser: boolean;
+  }> {
+    const existing = await this.userModel
+      .findOne({ phone: dto.phone })
+      .select('+passwordHash')
+      .lean();
+
+    // Phone exists AND already has a password → must login instead
+    if (existing && existing.passwordHash) {
+      throw new ConflictException('رقم الهاتف مسجل مسبقاً. يرجى تسجيل الدخول.');
+    }
+
+    const passwordHash = await bcrypt.hash(dto.password, this.BCRYPT_ROUNDS);
+
+    let savedUser: any;
+    if (existing) {
+      // Created via OTP before — just set their data and password
+      savedUser = await this.userModel.findOneAndUpdate(
+        { _id: existing._id },
+        {
+          $set: {
+            name: dto.name,
+            passwordHash,
+            skillLevel: dto.skillLevel ?? existing.skillLevel ?? 'beginner',
+            preferredSports: dto.preferredSports ?? existing.preferredSports ?? [],
+          },
+          $unset: { otpHash: 1, otpExpiresAt: 1 },
+        },
+        { new: true },
+      );
+    } else {
+      savedUser = await this.userModel.create({
+        name: dto.name,
+        phone: dto.phone,
+        passwordHash,
+        skillLevel: dto.skillLevel ?? 'beginner',
+        preferredSports: dto.preferredSports ?? [],
+        role: 'athlete',
+      });
+    }
+
+    const { accessToken, refreshToken } = await this.issueTokens(savedUser);
+    const refreshTokenHash = await bcrypt.hash(refreshToken, this.BCRYPT_ROUNDS);
+    await this.userModel.updateOne({ _id: savedUser._id }, { $set: { refreshTokenHash } });
+
+    const { passwordHash: _ph, refreshTokenHash: _rth, ...safeUser } = savedUser.toObject ? savedUser.toObject() : { ...savedUser };
+    return { accessToken, refreshToken, user: safeUser, isNewUser: true };
+  }
+
+  async login(dto: LoginDtoType): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    user: Partial<UserDocument>;
+    isNewUser: boolean;
+  }> {
+    const user = await this.userModel
+      .findOne({ phone: dto.phone })
+      .select('+passwordHash')
+      .lean();
+
+    if (!user || !user.passwordHash) {
+      throw new UnauthorizedException('رقم الهاتف أو كلمة المرور غير صحيحة.');
+    }
+
+    const isValid = await bcrypt.compare(dto.password, user.passwordHash as string);
+    if (!isValid) {
+      throw new UnauthorizedException('رقم الهاتف أو كلمة المرور غير صحيحة.');
+    }
+
+    const { accessToken, refreshToken } = await this.issueTokens(user);
+    const refreshTokenHash = await bcrypt.hash(refreshToken, this.BCRYPT_ROUNDS);
+    await this.userModel.updateOne({ _id: user._id }, { $set: { refreshTokenHash } });
+
+    const { passwordHash: _ph, otpHash: _oh, otpExpiresAt: _oe, refreshTokenHash: _rth, ...safeUser } = user as any;
+    return { accessToken, refreshToken, user: safeUser, isNewUser: false };
+  }
 
   async sendOtp(dto: SendOtpDtoType): Promise<{ message: string }> {
     const otp = this.generateOtp();

@@ -13,6 +13,10 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import {
+  RegisterDto,
+  LoginDto,
+  RegisterDtoType,
+  LoginDtoType,
   SendOtpDto,
   VerifyOtpDto,
   RefreshTokenDto,
@@ -25,6 +29,22 @@ import {
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
+
+  @Post('register')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({ summary: 'Register new user with phone + password' })
+  @UsePipes(new ZodValidationPipe(RegisterDto))
+  register(@Body() dto: RegisterDtoType) {
+    return this.authService.register(dto);
+  }
+
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login with phone + password' })
+  @UsePipes(new ZodValidationPipe(LoginDto))
+  login(@Body() dto: LoginDtoType) {
+    return this.authService.login(dto);
+  }
 
   @Post('otp/send')
   @HttpCode(HttpStatus.OK)

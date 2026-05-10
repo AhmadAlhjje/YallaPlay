@@ -1,44 +1,54 @@
 import React, { useState } from 'react';
 import {
-  View, Text, StyleSheet, TouchableOpacity, ScrollView, TextInput, Alert,
+  View, Text, StyleSheet, TouchableOpacity, ScrollView,
+  TextInput, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '../../src/store/auth.store';
 import { usersApi } from '../../src/api/users.api';
-import { GlassCard } from '../../src/components/GlassCard';
-import { PrimaryButton } from '../../src/components/PrimaryButton';
-import { Colors, Typography, Spacing, Radius } from '../../src/theme';
+import { Colors, Spacing, Radius } from '../../src/theme';
 
 const SKILL_LEVELS = [
-  { key: 'beginner',     label: 'مبتدئ',  icon: '🌱' },
-  { key: 'intermediate', label: 'متوسط',   icon: '⚡' },
-  { key: 'advanced',     label: 'متقدم',   icon: '🏆' },
-  { key: 'professional', label: 'محترف',   icon: '⭐' },
+  { key: 'beginner',     label: 'مبتدئ' },
+  { key: 'intermediate', label: 'متوسط' },
+  { key: 'pro',          label: 'محترف' },
 ] as const;
 
 const SPORTS_LIST = [
-  { key: 'football',   label: 'كرة القدم',   emoji: '⚽' },
-  { key: 'basketball', label: 'كرة السلة',   emoji: '🏀' },
-  { key: 'tennis',     label: 'تنس',          emoji: '🎾' },
-  { key: 'volleyball', label: 'كرة الطائرة', emoji: '🏐' },
-  { key: 'padel',      label: 'بادل',         emoji: '🏓' },
-  { key: 'squash',     label: 'إسكواش',       emoji: '🎱' },
+  { key: 'football',   label: 'كرة القدم' },
+  { key: 'basketball', label: 'كرة السلة' },
+  { key: 'tennis',     label: 'تنس' },
+  { key: 'volleyball', label: 'كرة الطائرة' },
+  { key: 'padel',      label: 'بادل' },
+  { key: 'squash',     label: 'سكواش' },
+  { key: 'badminton',  label: 'ريشة طائرة' },
+  { key: 'swimming',   label: 'سباحة' },
 ] as const;
 
 type SkillKey = typeof SKILL_LEVELS[number]['key'];
 type SportKey = typeof SPORTS_LIST[number]['key'];
 
+const PLAN_LABEL: Record<string, string> = {
+  free: 'مجاني', primer: 'برايمر', pro: 'برو', custom: 'مخصص',
+};
+
 export default function ProfileTab() {
   const { user, updateUser, logout } = useAuthStore();
-  const qc = useQueryClient();
 
-  const [editMode, setEditMode]               = useState(false);
-  const [name, setName]                       = useState(user?.name ?? '');
-  const [skillLevel, setSkillLevel]           = useState<SkillKey | undefined>(user?.skillLevel as SkillKey);
-  const [preferredSports, setPreferredSports] = useState<SportKey[]>((user?.preferredSports ?? []) as SportKey[]);
+  const [editMode, setEditMode]         = useState(false);
+  const [name, setName]                 = useState(user?.name ?? '');
+  const [skillLevel, setSkill]          = useState<SkillKey>((user?.skillLevel as SkillKey) ?? 'beginner');
+  const [preferredSports, setSports]    = useState<SportKey[]>((user?.preferredSports ?? []) as SportKey[]);
+
+  const initials = (user?.name ?? 'لاعب')
+    .split(' ')
+    .map((w) => w[0] ?? '')
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   const updateMutation = useMutation({
     mutationFn: () => usersApi.updateMe({ name, skillLevel, preferredSports }),
@@ -50,241 +60,409 @@ export default function ProfileTab() {
     onError: () => Alert.alert('خطأ', 'تعذّر حفظ التغييرات'),
   });
 
-  const handleLogout = () => {
-    Alert.alert('تسجيل الخروج', 'هل تريد تسجيل الخروج؟', [
-      { text: 'لا', style: 'cancel' },
-      { text: 'نعم', style: 'destructive', onPress: async () => { await logout(); router.replace('/(auth)/welcome'); } },
-    ]);
+  const openEdit = () => {
+    setName(user?.name ?? '');
+    setSkill((user?.skillLevel as SkillKey) ?? 'beginner');
+    setSports((user?.preferredSports ?? []) as SportKey[]);
+    setEditMode(true);
   };
 
-  const toggleSport = (sport: SportKey) => {
-    setPreferredSports((prev) =>
-      prev.includes(sport) ? prev.filter((s) => s !== sport) : [...prev, sport],
+  const cancelEdit = () => {
+    setName(user?.name ?? '');
+    setSkill((user?.skillLevel as SkillKey) ?? 'beginner');
+    setSports((user?.preferredSports ?? []) as SportKey[]);
+    setEditMode(false);
+  };
+
+  const handleLogout = () => {
+    Alert.alert(
+      'تسجيل الخروج',
+      'هل أنت متأكد من تسجيل الخروج؟',
+      [
+        { text: 'إلغاء', style: 'cancel' },
+        {
+          text: 'تسجيل الخروج',
+          style: 'destructive',
+          onPress: async () => {
+            await logout();
+            router.replace('/(auth)/welcome');
+          },
+        },
+      ],
     );
   };
 
-  const initials = (user?.name ?? 'لاعب').split(' ').map((w) => w[0]).join('').slice(0, 2);
-  const planLabel: Record<string, string> = { free: 'مجاني', primer: 'برايمر', pro: 'برو' };
+  const toggleSport = (key: SportKey) =>
+    setSports((prev) => prev.includes(key) ? prev.filter((s) => s !== key) : [...prev, key]);
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        <SafeAreaView>
-          {/* Hero */}
-          <View style={styles.hero}>
-            <View style={styles.avatar}>
-              <Text style={[Typography.h1, { color: '#fff' }]}>{initials}</Text>
-            </View>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={{ flex: 1 }}
+      >
+        <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+          {/* ── Green header ───────────────────────────────── */}
+          <View style={styles.header}>
+            <SafeAreaView edges={['top']}>
+              {/* Top row */}
+              <View style={styles.headerTopRow}>
+                <Text style={styles.headerScreenTitle}>الملف الشخصي</Text>
+                {!editMode ? (
+                  <TouchableOpacity onPress={openEdit} style={styles.headerEditBtn}>
+                    <Text style={styles.headerEditText}>تعديل</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <View style={styles.editActions}>
+                    <TouchableOpacity onPress={cancelEdit} style={styles.cancelBtn}>
+                      <Text style={styles.cancelBtnText}>إلغاء</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => updateMutation.mutate()}
+                      style={styles.saveBtn}
+                      disabled={updateMutation.isPending}
+                    >
+                      <Text style={styles.saveBtnText}>
+                        {updateMutation.isPending ? 'حفظ...' : 'حفظ'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </View>
 
-            {!editMode ? (
-              <>
-                <Text style={[Typography.h2, { color: Colors.text.primary, marginTop: Spacing.md }]}>
-                  {user?.name}
-                </Text>
-                <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>{user?.phone}</Text>
-                <View style={styles.planBadge}>
-                  <Text style={[Typography.labelSm, { color: Colors.brand.primary }]}>
-                    ✨ {planLabel[user?.plan ?? 'free'] ?? user?.plan}
-                  </Text>
+              {/* Avatar */}
+              <View style={styles.avatarWrapper}>
+                <View style={styles.avatar}>
+                  <Text style={styles.avatarText}>{initials}</Text>
                 </View>
-              </>
-            ) : (
-              <TextInput
-                value={name}
-                onChangeText={setName}
-                style={styles.nameInput}
-                placeholder="اسمك"
-                placeholderTextColor={Colors.text.tertiary}
-                textAlign="center"
-              />
-            )}
+              </View>
 
-            <TouchableOpacity
-              onPress={() => { if (!editMode) { setName(user?.name ?? ''); setEditMode(true); } else updateMutation.mutate(); }}
-              style={styles.editBtn}
-            >
-              {updateMutation.isPending
-                ? <Text style={[Typography.labelMd, { color: Colors.text.tertiary }]}>جاري الحفظ...</Text>
-                : <Text style={[Typography.labelMd, { color: Colors.brand.primary }]}>
-                    {editMode ? 'حفظ' : 'تعديل الملف'}
-                  </Text>
-              }
-            </TouchableOpacity>
-            {editMode && (
-              <TouchableOpacity onPress={() => setEditMode(false)} style={[styles.editBtn, { marginTop: 4 }]}>
-                <Text style={[Typography.labelMd, { color: Colors.text.tertiary }]}>إلغاء</Text>
-              </TouchableOpacity>
-            )}
+              {/* Name */}
+              {editMode ? (
+                <TextInput
+                  value={name}
+                  onChangeText={setName}
+                  style={styles.nameInput}
+                  placeholder="اسمك الكامل"
+                  placeholderTextColor="rgba(255,255,255,0.5)"
+                  textAlign="center"
+                  maxLength={50}
+                />
+              ) : (
+                <Text style={styles.userName}>{user?.name}</Text>
+              )}
+              <Text style={styles.userPhone}>{user?.phone}</Text>
+
+              {/* Plan badge */}
+              <View style={styles.planBadge}>
+                <Text style={styles.planText}>{PLAN_LABEL[user?.plan ?? 'free']}</Text>
+              </View>
+            </SafeAreaView>
           </View>
 
+          {/* ── White body ─────────────────────────────────── */}
           <View style={styles.body}>
-            {/* Quick Stats */}
-            <GlassCard style={styles.statsRow}>
-              <StatChip icon="⭐" value={String(user?.points ?? 0)} label="نقاط" onPress={() => router.push('/points')} />
-              <View style={styles.statDivider} />
-              <StatChip icon="📋" value="حجوزاتي" label="السجل" onPress={() => router.push('/(tabs)/bookings')} />
-              <View style={styles.statDivider} />
-              <StatChip icon="🔔" value="الإشعارات" label="البريد" onPress={() => router.push('/notifications')} />
-            </GlassCard>
 
-            {/* Skill Level */}
-            <Text style={[Typography.h3, styles.sectionTitle]}>مستوى اللعب</Text>
-            <View style={styles.skillGrid}>
-              {SKILL_LEVELS.map((s) => (
-                <TouchableOpacity
-                  key={s.key}
-                  onPress={() => editMode && setSkillLevel(s.key)}
-                  style={[
-                    styles.skillChip,
-                    skillLevel === s.key && styles.skillChipActive,
-                    !editMode && { opacity: skillLevel === s.key ? 1 : 0.5 },
-                  ]}
-                >
-                  <Text style={{ fontSize: 22 }}>{s.icon}</Text>
-                  <Text style={[Typography.labelMd, { color: skillLevel === s.key ? Colors.brand.primary : Colors.text.secondary }]}>
-                    {s.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            {/* Quick stats */}
+            <View style={styles.statsRow}>
+              <TouchableOpacity style={styles.statItem} onPress={() => router.push('/points')}>
+                <Text style={styles.statValue}>{user?.points ?? 0}</Text>
+                <Text style={styles.statLabel}>نقطة</Text>
+              </TouchableOpacity>
+              <View style={styles.statDivider} />
+              <TouchableOpacity style={styles.statItem} onPress={() => router.push('/(tabs)/bookings')}>
+                <Text style={styles.statValue}>حجوزاتي</Text>
+                <Text style={styles.statLabel}>السجل</Text>
+              </TouchableOpacity>
+              <View style={styles.statDivider} />
+              <TouchableOpacity style={styles.statItem} onPress={() => router.push('/notifications')}>
+                <Text style={styles.statValue}>الإشعارات</Text>
+                <Text style={styles.statLabel}>المركز</Text>
+              </TouchableOpacity>
             </View>
 
-            {/* Preferred Sports */}
-            <Text style={[Typography.h3, styles.sectionTitle]}>الرياضات المفضلة</Text>
-            <View style={styles.sportsGrid}>
-              {SPORTS_LIST.map((s) => {
-                const selected = preferredSports.includes(s.key);
-                return (
-                  <TouchableOpacity
-                    key={s.key}
-                    onPress={() => editMode && toggleSport(s.key)}
-                    style={[
-                      styles.sportChip,
-                      selected && styles.sportChipActive,
-                      !editMode && !selected && { opacity: 0.4 },
-                    ]}
-                  >
-                    <Text style={{ fontSize: 24 }}>{s.emoji}</Text>
-                    <Text style={[Typography.labelSm, { color: selected ? Colors.brand.primary : Colors.text.secondary }]}>
-                      {s.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+            {/* Skill level */}
+            <Section title="مستوى اللعب">
+              <View style={styles.chipRow}>
+                {SKILL_LEVELS.map((s) => {
+                  const active = skillLevel === s.key;
+                  return (
+                    <TouchableOpacity
+                      key={s.key}
+                      style={[styles.chip, active && styles.chipActive]}
+                      onPress={() => editMode && setSkill(s.key)}
+                      activeOpacity={editMode ? 0.7 : 1}
+                    >
+                      <Text style={[styles.chipText, active && styles.chipTextActive]}>
+                        {s.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+              {!editMode && (
+                <Text style={styles.editHint}>اضغط على "تعديل" لتغيير المستوى</Text>
+              )}
+            </Section>
 
-            {/* Settings section */}
-            <Text style={[Typography.h3, styles.sectionTitle]}>الإعدادات</Text>
-            <GlassCard style={styles.settingsCard}>
-              <SettingRow icon="📍" label="تحديث الموقع" onPress={() => {}} />
-              <View style={styles.settingDivider} />
-              <SettingRow icon="🔔" label="إعدادات الإشعارات" onPress={() => {}} />
-              <View style={styles.settingDivider} />
-              <SettingRow icon="🔒" label="الخصوصية والأمان" onPress={() => {}} />
-              <View style={styles.settingDivider} />
-              <SettingRow
-                icon="🚪"
-                label="تسجيل الخروج"
-                onPress={handleLogout}
-                labelColor={Colors.error}
-              />
-            </GlassCard>
+            {/* Preferred sports */}
+            <Section title="الرياضات المفضلة">
+              <View style={styles.sportsWrap}>
+                {SPORTS_LIST.map((sp) => {
+                  const selected = preferredSports.includes(sp.key);
+                  return (
+                    <TouchableOpacity
+                      key={sp.key}
+                      style={[
+                        styles.sportTag,
+                        selected && styles.sportTagActive,
+                        !editMode && !selected && styles.sportTagDim,
+                      ]}
+                      onPress={() => editMode && toggleSport(sp.key)}
+                      activeOpacity={editMode ? 0.7 : 1}
+                    >
+                      <Text style={[styles.sportTagText, selected && styles.sportTagTextActive]}>
+                        {sp.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </Section>
+
+            {/* Navigation links */}
+            <Section title="الحساب">
+              <View style={styles.linkList}>
+                <LinkRow label="الحجوزات والسجل" onPress={() => router.push('/(tabs)/bookings')} />
+                <Divider />
+                <LinkRow label="قائمة الانتظار" onPress={() => router.push('/(tabs)/waitlist')} />
+                <Divider />
+                <LinkRow label="النقاط والمكافآت" onPress={() => router.push('/points')} />
+                <Divider />
+                <LinkRow label="الإشعارات" onPress={() => router.push('/notifications')} />
+              </View>
+            </Section>
+
+            {/* Logout */}
+            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
+              <Text style={styles.logoutText}>تسجيل الخروج</Text>
+            </TouchableOpacity>
 
             <View style={{ height: 100 }} />
           </View>
-        </SafeAreaView>
-      </ScrollView>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
 
-function StatChip({ icon, value, label, onPress }: { icon: string; value: string; label: string; onPress: () => void }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <TouchableOpacity onPress={onPress} style={styles.statChip}>
-      <Text style={{ fontSize: 22 }}>{icon}</Text>
-      <Text style={[Typography.numericMd, { color: Colors.text.primary }]}>{value}</Text>
-      <Text style={[Typography.labelSm, { color: Colors.text.tertiary }]}>{label}</Text>
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>{title}</Text>
+      {children}
+    </View>
+  );
+}
+
+function LinkRow({ label, onPress }: { label: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity style={styles.linkRow} onPress={onPress} activeOpacity={0.6}>
+      <Text style={styles.linkLabel}>{label}</Text>
+      <Text style={styles.linkArrow}>›</Text>
     </TouchableOpacity>
   );
 }
 
-function SettingRow({ icon, label, onPress, labelColor }: { icon: string; label: string; onPress: () => void; labelColor?: string }) {
-  return (
-    <TouchableOpacity onPress={onPress} style={styles.settingRow}>
-      <Text style={{ fontSize: 20 }}>{icon}</Text>
-      <Text style={[Typography.bodyMd, { color: labelColor ?? Colors.text.primary, flex: 1 }]}>{label}</Text>
-      <Text style={{ color: Colors.text.tertiary, fontSize: 18 }}>›</Text>
-    </TouchableOpacity>
-  );
+function Divider() {
+  return <View style={styles.linkDivider} />;
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background.primary },
-  hero: {
-    alignItems: 'center',
-    paddingVertical: Spacing.xl,
-    paddingHorizontal: Spacing.xl,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border.default,
-    backgroundColor: Colors.brand.light,
-  },
-  avatar: {
-    width: 80, height: 80, borderRadius: 40,
+  container: { flex: 1, backgroundColor: '#F8FAFC' },
+
+  // ── Header ────────────────────────────────────────────────
+  header: {
     backgroundColor: Colors.brand.primary,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: Colors.brand.border,
+    paddingHorizontal: Spacing.xl,
+    paddingBottom: 36,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: Spacing.md,
+    paddingBottom: Spacing.xl,
+  },
+  headerScreenTitle: { color: '#FFFFFF', fontSize: 18, fontWeight: '700' },
+  headerEditBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.5)',
+  },
+  headerEditText: { color: '#FFFFFF', fontSize: 13, fontWeight: '600' },
+  editActions: { flexDirection: 'row', gap: 8 },
+  cancelBtn: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.4)',
+  },
+  cancelBtnText: { color: 'rgba(255,255,255,0.8)', fontSize: 13, fontWeight: '600' },
+  saveBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+    backgroundColor: '#FFFFFF',
+  },
+  saveBtnText: { color: Colors.brand.primary, fontSize: 13, fontWeight: '700' },
+
+  avatarWrapper: { alignItems: 'center', marginBottom: 12 },
+  avatar: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    borderWidth: 2.5,
+    borderColor: 'rgba(255,255,255,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarText: { fontSize: 30, fontWeight: '800', color: '#FFFFFF' },
+
+  userName:  { color: '#FFFFFF', fontSize: 22, fontWeight: '700', textAlign: 'center' },
+  userPhone: { color: 'rgba(255,255,255,0.75)', fontSize: 14, textAlign: 'center', marginTop: 4 },
+  nameInput: {
+    color: '#FFFFFF',
+    fontSize: 22,
+    fontWeight: '700',
+    textAlign: 'center',
+    borderBottomWidth: 1.5,
+    borderBottomColor: 'rgba(255,255,255,0.6)',
+    paddingBottom: 6,
+    paddingHorizontal: Spacing.xl,
+    marginBottom: 4,
   },
   planBadge: {
-    marginTop: Spacing.sm,
-    paddingHorizontal: 12, paddingVertical: 4,
+    alignSelf: 'center',
+    marginTop: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 4,
     borderRadius: Radius.full,
-    backgroundColor: Colors.brand.primary + '22',
-    borderWidth: 1, borderColor: Colors.brand.border,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.35)',
   },
-  editBtn: { marginTop: Spacing.md },
-  nameInput: {
-    marginTop: Spacing.md,
-    fontSize: 24, fontWeight: '700',
-    color: Colors.text.primary,
-    borderBottomWidth: 1.5, borderBottomColor: Colors.brand.primary,
-    paddingBottom: 6, paddingHorizontal: Spacing.xl,
-    textAlign: 'center',
+  planText: { color: '#FFFFFF', fontSize: 12, fontWeight: '600' },
+
+  // ── Body ──────────────────────────────────────────────────
+  body: {
+    marginTop: -20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    backgroundColor: '#F8FAFC',
+    paddingTop: Spacing.xl,
   },
-  body: { paddingHorizontal: Spacing.xl },
-  statsRow: { flexDirection: 'row', padding: Spacing.md, marginBottom: Spacing.xl, marginTop: Spacing.xl },
-  statChip: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: Spacing.sm },
-  statDivider: { width: 1, backgroundColor: Colors.border.default },
+
+  // Stats row
+  statsRow: {
+    flexDirection: 'row',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: Spacing.xl,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    overflow: 'hidden',
+    marginBottom: Spacing.xl,
+  },
+  statItem: { flex: 1, alignItems: 'center', paddingVertical: Spacing.lg, gap: 2 },
+  statValue: { fontSize: 16, fontWeight: '700', color: Colors.text.primary },
+  statLabel: { fontSize: 11, color: Colors.text.tertiary },
+  statDivider: { width: 1, backgroundColor: Colors.border.default, marginVertical: 12 },
+
+  // Section
+  section: { paddingHorizontal: Spacing.xl, marginBottom: Spacing.xl },
   sectionTitle: {
-    color: Colors.text.primary,
-    marginBottom: Spacing.md, marginTop: Spacing.sm,
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.text.tertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.md,
+    textAlign: 'right',
   },
-  skillGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: Spacing.xl },
-  skillChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: Spacing.lg, paddingVertical: 10,
-    borderRadius: Radius.lg, borderWidth: 1.5,
-    borderColor: Colors.border.default, backgroundColor: Colors.background.secondary,
-    minWidth: '45%',
+
+  // Skill chips
+  chipRow: { flexDirection: 'row', gap: 10 },
+  chip: {
+    flex: 1,
+    height: 42,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.border.default,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  skillChipActive: {
+  chipActive: {
+    backgroundColor: Colors.brand.primary,
     borderColor: Colors.brand.primary,
+  },
+  chipText: { fontSize: 14, fontWeight: '600', color: Colors.text.secondary },
+  chipTextActive: { color: '#FFFFFF' },
+  editHint: { fontSize: 11, color: Colors.text.tertiary, textAlign: 'right', marginTop: 8 },
+
+  // Sports tags
+  sportsWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  sportTag: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.border.default,
+    backgroundColor: '#FFFFFF',
+  },
+  sportTagActive: {
     backgroundColor: Colors.brand.light,
-  },
-  sportsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: Spacing.xl },
-  sportChip: {
-    flexDirection: 'column', alignItems: 'center', gap: 4,
-    paddingHorizontal: Spacing.md, paddingVertical: Spacing.md,
-    borderRadius: Radius.lg, borderWidth: 1.5,
-    borderColor: Colors.border.default, backgroundColor: Colors.background.secondary,
-    minWidth: '30%', flex: 1,
-  },
-  sportChipActive: {
     borderColor: Colors.brand.primary,
-    backgroundColor: Colors.brand.light,
   },
-  settingsCard: { padding: 0, overflow: 'hidden' },
-  settingRow: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md + 2,
+  sportTagDim: { opacity: 0.4 },
+  sportTagText: { fontSize: 13, fontWeight: '500', color: Colors.text.secondary },
+  sportTagTextActive: { color: Colors.brand.dark, fontWeight: '700' },
+
+  // Link list
+  linkList: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    overflow: 'hidden',
   },
-  settingDivider: { height: 1, backgroundColor: Colors.border.default, marginHorizontal: Spacing.lg },
+  linkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.lg,
+    paddingVertical: Spacing.md + 2,
+  },
+  linkLabel: { fontSize: 15, color: Colors.text.primary, textAlign: 'right' },
+  linkArrow: { fontSize: 20, color: Colors.text.tertiary },
+  linkDivider: { height: 1, backgroundColor: Colors.border.default, marginHorizontal: Spacing.lg },
+
+  // Logout
+  logoutBtn: {
+    marginHorizontal: Spacing.xl,
+    marginTop: 4,
+    height: 50,
+    borderRadius: Radius.lg,
+    borderWidth: 1.5,
+    borderColor: Colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF',
+  },
+  logoutText: { color: Colors.error, fontSize: 15, fontWeight: '700' },
 });

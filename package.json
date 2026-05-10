@@ -12,7 +12,10 @@
     "lint": "turbo run lint",
     "test": "turbo run test",
     "db:up": "docker-compose up -d",
-    "db:down": "docker-compose down"
+    "db:down": "docker-compose down",
+    "db:seed": "node scripts/seed.js",
+    "db:seed:reset": "node scripts/seed.js --reset",
+    "db:seed:indexes": "node scripts/seed.js --indexes"
   },
   "devDependencies": {
     "turbo": "^2.0.0",
