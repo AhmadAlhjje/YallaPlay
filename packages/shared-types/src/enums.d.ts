@@ -1,0 +1,23 @@
+export declare const SportType: readonly ["football", "basketball", "tennis", "volleyball", "padel", "squash", "badminton", "swimming"];
+export type SportType = (typeof SportType)[number];
+export declare const SkillLevel: readonly ["beginner", "intermediate", "pro"];
+export type SkillLevel = (typeof SkillLevel)[number];
+export declare const UserRole: readonly ["athlete", "owner", "admin"];
+export type UserRole = (typeof UserRole)[number];
+export declare const PlanTier: readonly ["free", "primer", "pro", "custom"];
+export type PlanTier = (typeof PlanTier)[number];
+export declare const BookingStatus: readonly ["pending_payment", "confirmed", "cancelled", "completed", "no_show"];
+export type BookingStatus = (typeof BookingStatus)[number];
+export declare const PaymentMethod: readonly ["qr_cash", "stc_pay", "mada", "points"];
+export type PaymentMethod = (typeof PaymentMethod)[number];
+export declare const PaymentStatus: readonly ["unpaid", "paid"];
+export type PaymentStatus = (typeof PaymentStatus)[number];
+export declare const NotificationType: readonly ["booking_confirmed", "booking_reminder", "booking_cancelled", "waitlist_available", "points_earned", "offer", "plan_upgraded", "plan_expired"];
+export type NotificationType = (typeof NotificationType)[number];
+export declare const WaitlistStatus: readonly ["waiting", "notified", "converted", "expired"];
+export type WaitlistStatus = (typeof WaitlistStatus)[number];
+export declare const BillingCycle: readonly ["monthly", "yearly"];
+export type BillingCycle = (typeof BillingCycle)[number];
+export declare const DayOfWeek: readonly ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+export type DayOfWeek = (typeof DayOfWeek)[number];
+//# sourceMappingURL=enums.d.ts.map

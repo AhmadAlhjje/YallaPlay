@@ -17,11 +17,12 @@ const EnvSchema = z.object({
   JWT_REFRESH_SECRET: z.string().min(32, 'JWT_REFRESH_SECRET must be at least 32 characters'),
   JWT_QR_SECRET: z.string().min(32, 'JWT_QR_SECRET must be at least 32 characters'),
 
-  // SMS
-  SMS_PROVIDER: z.enum(['console', 'twilio']).default('console'),
+  // SMS / WhatsApp
+  SMS_PROVIDER: z.enum(['console', 'twilio', 'whatsapp']).default('console'),
   TWILIO_ACCOUNT_SID: z.string().optional(),
   TWILIO_AUTH_TOKEN: z.string().optional(),
   TWILIO_PHONE_NUMBER: z.string().optional(),
+  WHATSAPP_AUTH_DIR: z.string().optional(),
 
   // Firebase (FCM push notifications)
   FIREBASE_PROJECT_ID: z.string().optional(),

@@ -4,7 +4,6 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '../../src/store/auth.store';
@@ -14,19 +13,19 @@ import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
 
 const SKILL_LEVELS = [
-  { key: 'beginner',      label: 'مبتدئ',     icon: '🌱' },
-  { key: 'intermediate',  label: 'متوسط',      icon: '⚡' },
-  { key: 'advanced',      label: 'متقدم',      icon: '🏆' },
-  { key: 'professional',  label: 'محترف',      icon: '⭐' },
+  { key: 'beginner',     label: 'مبتدئ',  icon: '🌱' },
+  { key: 'intermediate', label: 'متوسط',   icon: '⚡' },
+  { key: 'advanced',     label: 'متقدم',   icon: '🏆' },
+  { key: 'professional', label: 'محترف',   icon: '⭐' },
 ] as const;
 
 const SPORTS_LIST = [
-  { key: 'football',    label: 'كرة القدم',   emoji: '⚽' },
-  { key: 'basketball',  label: 'كرة السلة',   emoji: '🏀' },
-  { key: 'tennis',      label: 'تنس',          emoji: '🎾' },
-  { key: 'volleyball',  label: 'كرة الطائرة', emoji: '🏐' },
-  { key: 'padel',       label: 'بادل',         emoji: '🏓' },
-  { key: 'squash',      label: 'إسكواش',       emoji: '🎱' },
+  { key: 'football',   label: 'كرة القدم',   emoji: '⚽' },
+  { key: 'basketball', label: 'كرة السلة',   emoji: '🏀' },
+  { key: 'tennis',     label: 'تنس',          emoji: '🎾' },
+  { key: 'volleyball', label: 'كرة الطائرة', emoji: '🏐' },
+  { key: 'padel',      label: 'بادل',         emoji: '🏓' },
+  { key: 'squash',     label: 'إسكواش',       emoji: '🎱' },
 ] as const;
 
 type SkillKey = typeof SKILL_LEVELS[number]['key'];
@@ -72,10 +71,7 @@ export default function ProfileTab() {
       <ScrollView showsVerticalScrollIndicator={false}>
         <SafeAreaView>
           {/* Hero */}
-          <LinearGradient
-            colors={[Colors.brand.primary + '33', 'transparent']}
-            style={styles.hero}
-          >
+          <View style={styles.hero}>
             <View style={styles.avatar}>
               <Text style={[Typography.h1, { color: '#fff' }]}>{initials}</Text>
             </View>
@@ -119,7 +115,7 @@ export default function ProfileTab() {
                 <Text style={[Typography.labelMd, { color: Colors.text.tertiary }]}>إلغاء</Text>
               </TouchableOpacity>
             )}
-          </LinearGradient>
+          </View>
 
           <View style={styles.body}>
             {/* Quick Stats */}
@@ -227,19 +223,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.xl,
     paddingHorizontal: Spacing.xl,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.default,
+    backgroundColor: Colors.brand.light,
   },
   avatar: {
     width: 80, height: 80, borderRadius: 40,
     backgroundColor: Colors.brand.primary,
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: Colors.brand.primary + '55',
+    borderWidth: 3, borderColor: Colors.brand.border,
   },
   planBadge: {
     marginTop: Spacing.sm,
     paddingHorizontal: 12, paddingVertical: 4,
     borderRadius: Radius.full,
     backgroundColor: Colors.brand.primary + '22',
-    borderWidth: 1, borderColor: Colors.brand.primary + '44',
+    borderWidth: 1, borderColor: Colors.brand.border,
   },
   editBtn: { marginTop: Spacing.md },
   nameInput: {
@@ -251,9 +250,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   body: { paddingHorizontal: Spacing.xl },
-  statsRow: { flexDirection: 'row', padding: Spacing.md, marginBottom: Spacing.xl },
+  statsRow: { flexDirection: 'row', padding: Spacing.md, marginBottom: Spacing.xl, marginTop: Spacing.xl },
   statChip: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: Spacing.sm },
-  statDivider: { width: 1, backgroundColor: Colors.glass.border },
+  statDivider: { width: 1, backgroundColor: Colors.border.default },
   sectionTitle: {
     color: Colors.text.primary,
     marginBottom: Spacing.md, marginTop: Spacing.sm,
@@ -263,29 +262,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: Spacing.lg, paddingVertical: 10,
     borderRadius: Radius.lg, borderWidth: 1.5,
-    borderColor: Colors.glass.border, backgroundColor: Colors.glass.subtle,
+    borderColor: Colors.border.default, backgroundColor: Colors.background.secondary,
     minWidth: '45%',
   },
   skillChipActive: {
     borderColor: Colors.brand.primary,
-    backgroundColor: Colors.brand.primary + '18',
+    backgroundColor: Colors.brand.light,
   },
   sportsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: Spacing.xl },
   sportChip: {
     flexDirection: 'column', alignItems: 'center', gap: 4,
     paddingHorizontal: Spacing.md, paddingVertical: Spacing.md,
     borderRadius: Radius.lg, borderWidth: 1.5,
-    borderColor: Colors.glass.border, backgroundColor: Colors.glass.subtle,
+    borderColor: Colors.border.default, backgroundColor: Colors.background.secondary,
     minWidth: '30%', flex: 1,
   },
   sportChipActive: {
     borderColor: Colors.brand.primary,
-    backgroundColor: Colors.brand.primary + '15',
+    backgroundColor: Colors.brand.light,
   },
   settingsCard: { padding: 0, overflow: 'hidden' },
   settingRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
     paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md + 2,
   },
-  settingDivider: { height: 1, backgroundColor: Colors.glass.subtle, marginHorizontal: Spacing.lg },
+  settingDivider: { height: 1, backgroundColor: Colors.border.default, marginHorizontal: Spacing.lg },
 });

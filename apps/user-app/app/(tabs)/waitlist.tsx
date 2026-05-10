@@ -11,10 +11,10 @@ import { GlassCard } from '../../src/components/GlassCard';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
-  waiting:  { label: 'في الانتظار', color: Colors.warning },
-  notified: { label: 'متاح الآن!',  color: Colors.success },
-  converted:{ label: 'تم الحجز',    color: Colors.info },
-  expired:  { label: 'انتهى',       color: Colors.text.tertiary },
+  waiting:   { label: 'في الانتظار', color: Colors.warning },
+  notified:  { label: 'متاح الآن!',  color: Colors.success },
+  converted: { label: 'تم الحجز',    color: Colors.info },
+  expired:   { label: 'انتهى',       color: Colors.text.tertiary },
 };
 
 export default function WaitlistTab() {
@@ -155,9 +155,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg, marginBottom: Spacing.xl,
   },
   badge: {
-    backgroundColor: Colors.brand.primary + '22',
+    backgroundColor: Colors.brand.light,
     borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 3,
-    borderWidth: 1, borderColor: Colors.brand.primary + '44',
+    borderWidth: 1, borderColor: Colors.brand.border,
   },
   empty: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
@@ -168,7 +168,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
     borderRadius: Radius.full,
     borderWidth: 1.5, borderColor: Colors.brand.primary,
-    backgroundColor: Colors.brand.primary + '15',
+    backgroundColor: Colors.brand.light,
   },
   card: { padding: Spacing.lg, marginBottom: Spacing.md, overflow: 'hidden' },
   cardNotified: {

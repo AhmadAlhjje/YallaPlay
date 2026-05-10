@@ -17,6 +17,7 @@
     "date-fns": "^3.6.0",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.400.0",
+    "styled-jsx": "^5.1.1",
     "@yallaplay/shared-types": "*"
   },
   "devDependencies": {

@@ -12,6 +12,7 @@ import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from '../../database/schemas/user.mongoose-schema';
 import { SendOtpDtoType, VerifyOtpDtoType, JwtPayloadType } from '@yallaplay/shared-types';
+import { WhatsappService } from './whatsapp.service';
 
 @Injectable()
 export class AuthService {
@@ -24,6 +25,7 @@ export class AuthService {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private jwtService: JwtService,
     private config: ConfigService,
+    private whatsapp: WhatsappService,
   ) {}
 
   async sendOtp(dto: SendOtpDtoType): Promise<{ message: string }> {
@@ -154,13 +156,27 @@ export class AuthService {
 
   private async dispatchOtp(phone: string, otp: string): Promise<void> {
     const provider = this.config.get('SMS_PROVIDER', 'console');
+    const isDev = this.config.get('NODE_ENV') === 'development';
+
     if (provider === 'console') {
-      // Local dev only
-      this.logger.debug(`[SMS MOCK] Phone: ${phone} | OTP: ${otp}`);
+      this.logger.debug(`[OTP MOCK] Phone: ${phone} | OTP: ${otp}`);
       return;
     }
-    // Twilio integration — add when SMS credentials are ready
-    // const twilioClient = require('twilio')(accountSid, authToken);
-    // await twilioClient.messages.create({ body: `رمز التحقق: ${otp}`, from: ..., to: phone });
+
+    if (provider === 'whatsapp') {
+      try {
+        await this.whatsapp.sendOtp(phone, otp);
+        return;
+      } catch (err) {
+        if (isDev) {
+          // Fallback to console in dev so testing isn't blocked by WhatsApp connectivity
+          this.logger.warn(`[WhatsApp unavailable — DEV FALLBACK] Phone: ${phone} | OTP: ${otp}`);
+          this.logger.warn('تحقق من terminal الخادم لقراءة الـ OTP أو امسح QR لتفعيل WhatsApp.');
+          return;
+        }
+        throw err;
+      }
+    }
+    // Twilio — add when SMS credentials are ready
   }
 }

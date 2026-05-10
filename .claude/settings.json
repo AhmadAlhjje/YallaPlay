@@ -2,7 +2,21 @@
   "permissions": {
     "allow": [
       "Bash(npm install *)",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(findstr '\"version\"')",
+      "Bash(Get-Content \"d:\\\\YallaPlay\\\\node_modules\\\\react\\\\package.json\")",
+      "Bash(Select-String '\"version\"')",
+      "Bash(Select-Object -First 1)",
+      "PowerShell(Get-ChildItem \"d:\\\\YallaPlay\\\\node_modules\" -Directory | Where-Object { $_.Name -match '^react' } | Select-Object Name)",
+      "PowerShell(if \\(Test-Path \"d:\\\\YallaPlay\\\\apps\\\\user-app\\\\node_modules\\\\react\\\\package.json\"\\) { \\(Get-Content \"d:\\\\YallaPlay\\\\apps\\\\user-app\\\\node_modules\\\\react\\\\package.json\" | ConvertFrom-Json\\).version } else { \"NOT FOUND\" })",
+      "PowerShell(\\(Get-Content \"d:\\\\YallaPlay\\\\node_modules\\\\react\\\\package.json\" | ConvertFrom-Json\\).version; \\(Get-Content \"d:\\\\YallaPlay\\\\node_modules\\\\react-native\\\\package.json\" | ConvertFrom-Json\\).version)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d.get\\('scripts',{}\\), indent=2, ensure_ascii=False\\)\\)\")",
+      "PowerShell(mongosh \"mongodb://localhost:27017/yallaplay\" \"$env:TEMP\\\\mongo_fix.js\" 2>&1)",
+      "PowerShell(docker exec yallaplay_mongo mongosh --username yallaplay --password yallaplay_dev_secret --authenticationDatabase admin --quiet yallaplay --eval $jsCode 2>&1)",
+      "PowerShell($jsCode = 'var r1=db.users.updateMany\\({\"location.coordinates\":{$size:0}},{$unset:{location:\"\"}}\\);print\\(\"Fixed:\",r1.modifiedCount\\);try{db.users.dropIndex\\(\"location_2dsphere\"\\);print\\(\"Dropped index\"\\);}catch\\(e\\){print\\(\"Index:\",e.message\\);}print\\(\"Total:\",db.users.countDocuments\\(\\)\\);')",
+      "Bash(docker exec *)",
+      "Bash(npx ts-node *)",
+      "Bash(curl -s http://localhost:3000/api/v1/health)"
     ]
   }
 }

@@ -1,8 +1,7 @@
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
 import { authApi } from '../api/auth.api';
 import { usersApi } from '../api/users.api';
-import { saveTokens, clearTokens } from '../api/client';
+import { getAccessToken, saveTokens, clearTokens } from '../api/client';
 
 interface User {
   _id: string;
@@ -40,7 +39,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   // Called once at app launch — restores session from secure storage
   initialize: async () => {
     try {
-      const token = await SecureStore.getItemAsync('yp_access_token');
+      const token = await getAccessToken();
       if (!token) {
         set({ isLoading: false });
         return;

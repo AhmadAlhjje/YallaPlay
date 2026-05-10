@@ -5,7 +5,7 @@ import { Model } from 'mongoose';
 import axios from 'axios';
 import { createClient, RedisClientType } from 'redis';
 
-interface WeatherData {
+export interface WeatherData {
   city: string;
   temperature: number;
   feelsLike: number;
@@ -17,7 +17,7 @@ interface WeatherData {
   fetchedAt: string;
 }
 
-interface DayForecast {
+export interface DayForecast {
   date: string;
   high: number;
   low: number;

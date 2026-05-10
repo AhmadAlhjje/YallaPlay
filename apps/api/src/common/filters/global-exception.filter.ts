@@ -37,7 +37,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       status = HttpStatus.CONFLICT;
       message = 'هذا الوقت محجوز بالفعل. يرجى اختيار وقت آخر.';
     } else {
-      this.logger.error(exception);
+      const msg = exception instanceof Error ? exception.message : String(exception);
+      this.logger.error(`Unhandled exception: ${msg}`, exception instanceof Error ? exception.stack : undefined);
     }
 
     response.status(status).json({

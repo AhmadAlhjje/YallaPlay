@@ -1,67 +1,53 @@
 import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, ViewStyle } from 'react-native';
+import { TouchableOpacity, Text, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import { Colors, Typography, Radius } from '../theme';
+import { Colors, Typography, Radius, Spacing } from '../theme';
 import type { SportType } from '@yallaplay/shared-types';
 
-const SPORT_LABELS: Record<SportType, string> = {
-  football:   '⚽ كرة قدم',
-  basketball: '🏀 سلة',
-  tennis:     '🎾 تنس',
-  volleyball: '🏐 طائرة',
-  padel:      '🏸 بادل',
-  squash:     '🟡 سكواش',
-  badminton:  '🏸 ريشة',
-  swimming:   '🏊 سباحة',
+const SPORT_INFO: Record<string, { label: string; emoji: string }> = {
+  football:   { label: 'كرة قدم', emoji: '⚽' },
+  basketball: { label: 'كرة سلة', emoji: '🏀' },
+  tennis:     { label: 'تنس', emoji: '🎾' },
+  volleyball: { label: 'طائرة', emoji: '🏐' },
+  padel:      { label: 'بادل', emoji: '🏓' },
+  squash:     { label: 'إسكواش', emoji: '🎱' },
+  badminton:  { label: 'ريشة', emoji: '🏸' },
+  swimming:   { label: 'سباحة', emoji: '🏊' },
 };
 
 interface SportChipProps {
   sport: SportType;
-  selected: boolean;
-  onPress: () => void;
-  style?: ViewStyle;
+  selected?: boolean;
+  onPress?: () => void;
+  style?: StyleProp<ViewStyle>;
 }
 
-export function SportChip({ sport, selected, onPress, style }: SportChipProps) {
-  const accentColor = (Colors.sport as Record<string, string>)[sport] ?? Colors.brand.primary;
+export function SportChip({ sport, selected = false, onPress, style }: SportChipProps) {
+  const info = SPORT_INFO[sport] ?? { label: sport, emoji: '🏟️' };
 
   return (
     <TouchableOpacity
-      onPress={() => {
-        Haptics.selectionAsync();
-        onPress();
-      }}
+      onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); onPress?.(); }}
       activeOpacity={0.75}
-      style={[
-        styles.chip,
-        selected
-          ? { backgroundColor: accentColor + '25', borderColor: accentColor }
-          : styles.unselected,
-        style,
-      ]}
+      style={[styles.chip, selected && styles.selected, style]}
     >
-      <Text
-        style={[
-          Typography.labelMd,
-          { color: selected ? accentColor : Colors.text.secondary },
-        ]}
-      >
-        {SPORT_LABELS[sport]}
-      </Text>
+      <Text style={styles.emoji}>{info.emoji}</Text>
+      <Text style={[styles.label, selected && styles.labelSelected]}>{info.label}</Text>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   chip: {
-    borderRadius: Radius.full,
-    borderWidth: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    marginRight: 8,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: Radius.full, borderWidth: 1.5,
+    borderColor: Colors.border.default,
+    backgroundColor: Colors.background.primary,
+    marginRight: Spacing.sm,
   },
-  unselected: {
-    backgroundColor: Colors.glass.subtle,
-    borderColor: Colors.glass.border,
-  },
+  selected: { backgroundColor: Colors.brand.light, borderColor: Colors.brand.primary },
+  emoji: { fontSize: 14 },
+  label: { ...Typography.labelMd, color: Colors.text.secondary },
+  labelSelected: { color: Colors.brand.primary },
 });

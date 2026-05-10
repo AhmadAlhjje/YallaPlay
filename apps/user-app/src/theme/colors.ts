@@ -1,74 +1,65 @@
 export const Colors = {
-  // ── Canvas ─────────────────────────────────────────────────────────────────
-  // Rich deep navy — all screens sit on this
   background: {
-    primary: '#0A0E1A',
-    secondary: '#0F1428',
-    elevated: '#141830',
+    primary:   '#FFFFFF',
+    secondary: '#F8FAFC',
+    elevated:  '#FFFFFF',
   },
-
-  // ── Glass surfaces ─────────────────────────────────────────────────────────
-  glass: {
-    // Card backgrounds — BlurView + these overlays
-    subtle:    'rgba(255, 255, 255, 0.04)',
-    light:     'rgba(255, 255, 255, 0.08)',
-    medium:    'rgba(255, 255, 255, 0.12)',
-    strong:    'rgba(255, 255, 255, 0.18)',
-    // Border — the frosted edge
-    border:    'rgba(255, 255, 255, 0.12)',
-    borderHover: 'rgba(255, 255, 255, 0.22)',
-    // Shimmer highlight — top edge of card
-    highlight: 'rgba(255, 255, 255, 0.06)',
-  },
-
-  // ── Brand ──────────────────────────────────────────────────────────────────
   brand: {
-    primary:   '#4F46E5', // Indigo
-    secondary: '#7C3AED', // Violet
-    gradient:  ['#4F46E5', '#7C3AED'] as const,
-    glow:      'rgba(79, 70, 229, 0.35)',
+    primary:   '#16A34A',
+    dark:      '#15803D',
+    light:     '#DCFCE7',
+    muted:     '#86EFAC',
+    border:    '#BBF7D0',
   },
-
-  // ── Semantic ───────────────────────────────────────────────────────────────
-  success:   '#10B981',
-  successBg: 'rgba(16, 185, 129, 0.15)',
-  warning:   '#F59E0B',
-  warningBg: 'rgba(245, 158, 11, 0.15)',
-  error:     '#EF4444',
-  errorBg:   'rgba(239, 68, 68, 0.15)',
-  info:      '#3B82F6',
-
-  // ── Slot status colors ─────────────────────────────────────────────────────
-  slot: {
-    available: '#10B981',
-    availableBg: 'rgba(16, 185, 129, 0.15)',
-    booked:    '#EF4444',
-    bookedBg:  'rgba(239, 68, 68, 0.15)',
-    pending:   '#F59E0B',
-    pendingBg: 'rgba(245, 158, 11, 0.15)',
-    closed:    '#374151',
-    closedBg:  'rgba(55, 65, 81, 0.15)',
-  },
-
-  // ── Sport accent colors ────────────────────────────────────────────────────
-  sport: {
-    football:   '#10B981',
-    basketball: '#F59E0B',
-    tennis:     '#FBBF24',
-    volleyball: '#60A5FA',
-    padel:      '#A78BFA',
-    squash:     '#F87171',
-    badminton:  '#34D399',
-    swimming:   '#38BDF8',
-  },
-
-  // ── Text ───────────────────────────────────────────────────────────────────
   text: {
-    primary:   '#F9FAFB',
-    secondary: '#9CA3AF',
-    tertiary:  '#6B7280',
-    inverse:   '#111827',
-    brand:     '#818CF8',
+    primary:   '#0F172A',
+    secondary: '#475569',
+    tertiary:  '#94A3B8',
+    inverse:   '#FFFFFF',
+    brand:     '#16A34A',
+  },
+  border: {
+    default: '#E2E8F0',
+    strong:  '#CBD5E1',
+    brand:   '#BBF7D0',
+  },
+  success:   '#16A34A',
+  successBg: '#DCFCE7',
+  error:     '#EF4444',
+  errorBg:   '#FEE2E2',
+  warning:   '#F59E0B',
+  warningBg: '#FEF3C7',
+  info:      '#3B82F6',
+  infoBg:    '#DBEAFE',
+  slot: {
+    available:   '#16A34A',
+    availableBg: '#DCFCE7',
+    booked:      '#EF4444',
+    bookedBg:    '#FEE2E2',
+    pending:     '#F59E0B',
+    pendingBg:   '#FEF3C7',
+    closed:      '#94A3B8',
+    closedBg:    '#F1F5F9',
+  },
+  sport: {
+    football:   '#16A34A',
+    basketball: '#F97316',
+    tennis:     '#EAB308',
+    volleyball: '#3B82F6',
+    padel:      '#8B5CF6',
+    squash:     '#EF4444',
+    badminton:  '#06B6D4',
+    swimming:   '#0EA5E9',
+  },
+  // glass kept for compatibility but now maps to flat values
+  glass: {
+    subtle:      'rgba(0,0,0,0.03)',
+    light:       'rgba(0,0,0,0.04)',
+    medium:      'rgba(0,0,0,0.06)',
+    strong:      'rgba(0,0,0,0.08)',
+    border:      '#E2E8F0',
+    borderHover: '#CBD5E1',
+    highlight:   'transparent',
   },
 } as const;
 

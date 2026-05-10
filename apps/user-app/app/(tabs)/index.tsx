@@ -12,16 +12,16 @@ import { SportChip } from '../../src/components/SportChip';
 import { useAuthStore } from '../../src/store/auth.store';
 import { useLocationStore } from '../../src/store/location.store';
 import { facilitiesApi } from '../../src/api/facilities.api';
-import { Colors, Typography, Spacing } from '../../src/theme';
+import { Colors, Typography, Spacing, Radius } from '../../src/theme';
 import { SportType } from '@yallaplay/shared-types';
 
 const SPORTS: SportType[] = ['football', 'basketball', 'tennis', 'volleyball', 'padel', 'squash'];
 
 export default function HomeScreen() {
-  const { user }  = useAuthStore();
+  const { user }   = useAuthStore();
   const { coords } = useLocationStore();
   const [selectedSport, setSelectedSport] = useState<SportType | undefined>();
-  const [search, setSearch]   = useState('');
+  const [search, setSearch] = useState('');
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -30,7 +30,6 @@ export default function HomeScreen() {
     return 'أهلاً';
   };
 
-  // Featured / popular facilities
   const { data: popularData, isLoading: popularLoading, refetch } = useQuery({
     queryKey: ['facilities', 'popular', selectedSport],
     queryFn: () => facilitiesApi.search({
@@ -42,7 +41,6 @@ export default function HomeScreen() {
     staleTime: 60_000,
   });
 
-  // Nearby facilities (requires location)
   const { data: nearbyData } = useQuery({
     queryKey: ['facilities', 'nearby', coords],
     queryFn: () => facilitiesApi.search({
@@ -116,7 +114,6 @@ export default function HomeScreen() {
               onPress={() => setSelectedSport(undefined)}
               style={{ marginRight: 8 }}
             />
-            {/* "الكل" chip above, then individual sports */}
             {SPORTS.map((s) => (
               <SportChip
                 key={s}
@@ -140,9 +137,9 @@ export default function HomeScreen() {
                 renderItem={({ item }) => (
                   <FacilityCard
                     facility={item}
-                    compact
+                    variant="compact"
                     onPress={() => handleFacilityPress(item._id)}
-                    style={{ marginRight: Spacing.md }}
+                    style={{ marginRight: Spacing.md, width: 260 }}
                   />
                 )}
               />
@@ -162,7 +159,6 @@ export default function HomeScreen() {
             />
           ))}
 
-          {/* Bottom padding for tab bar */}
           <View style={{ height: 100 }} />
         </SafeAreaView>
       </ScrollView>
@@ -194,19 +190,19 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: Colors.glass.subtle,
+    backgroundColor: Colors.background.secondary,
     borderWidth: 1,
-    borderColor: Colors.glass.border,
+    borderColor: Colors.border.default,
     alignItems: 'center',
     justifyContent: 'center',
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.glass.subtle,
+    backgroundColor: Colors.background.secondary,
     borderWidth: 1,
-    borderColor: Colors.glass.border,
-    borderRadius: 16,
+    borderColor: Colors.border.default,
+    borderRadius: Radius.lg,
     paddingHorizontal: Spacing.lg,
     paddingVertical: Spacing.md,
     gap: Spacing.md,

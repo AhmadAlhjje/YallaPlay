@@ -4,7 +4,6 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useQuery } from '@tanstack/react-query';
 import { usersApi } from '../src/api/users.api';
 import { useAuthStore } from '../src/store/auth.store';
@@ -20,7 +19,7 @@ const ACTION_ICONS: Record<string, string> = {
 
 export default function PointsScreen() {
   const { user } = useAuthStore();
-  const [page, setPage]   = useState(1);
+  const [page, setPage] = useState(1);
 
   const { data: historyData, isLoading, isFetching } = useQuery({
     queryKey: ['pointsHistory', page],
@@ -43,27 +42,26 @@ export default function PointsScreen() {
           <View style={{ width: 50 }} />
         </View>
 
-        {/* Balance Card */}
-        <LinearGradient colors={Colors.brand.gradient} style={styles.balanceCard}>
-          <View style={styles.balanceGlow} />
-          <Text style={[Typography.labelMd, { color: 'rgba(255,255,255,0.7)' }]}>رصيدك الحالي</Text>
+        {/* Balance Card — solid green */}
+        <View style={styles.balanceCard}>
+          <Text style={[Typography.labelMd, { color: 'rgba(255,255,255,0.8)' }]}>رصيدك الحالي</Text>
           <Text style={[Typography.displayLg, { color: '#fff', marginVertical: Spacing.sm }]}>
             {user?.points ?? 0}
           </Text>
-          <Text style={[Typography.labelLg, { color: 'rgba(255,255,255,0.85)' }]}>نقطة</Text>
+          <Text style={[Typography.labelLg, { color: 'rgba(255,255,255,0.9)' }]}>نقطة</Text>
 
           <View style={styles.earnInfo}>
             <View style={styles.earnItem}>
               <Text style={[Typography.numericMd, { color: '#fff' }]}>5</Text>
-              <Text style={[Typography.labelSm, { color: 'rgba(255,255,255,0.7)' }]}>نقاط لكل حجز</Text>
+              <Text style={[Typography.labelSm, { color: 'rgba(255,255,255,0.75)' }]}>نقاط لكل حجز</Text>
             </View>
             <View style={styles.earnDivider} />
             <View style={styles.earnItem}>
               <Text style={[Typography.numericMd, { color: '#fff' }]}>1</Text>
-              <Text style={[Typography.labelSm, { color: 'rgba(255,255,255,0.7)' }]}>ريال = نقطة</Text>
+              <Text style={[Typography.labelSm, { color: 'rgba(255,255,255,0.75)' }]}>ريال = نقطة</Text>
             </View>
           </View>
-        </LinearGradient>
+        </View>
 
         {/* How to earn */}
         <GlassCard style={styles.howCard}>
@@ -158,20 +156,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: Spacing.huge,
     paddingHorizontal: Spacing.xl,
+    backgroundColor: Colors.brand.primary,
     overflow: 'hidden',
-  },
-  balanceGlow: {
-    position: 'absolute', width: 200, height: 200, borderRadius: 100,
-    backgroundColor: 'rgba(255,255,255,0.08)', top: -60, right: -40,
   },
   earnInfo: {
     flexDirection: 'row', marginTop: Spacing.xl,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.15)',
     borderRadius: Radius.lg, padding: Spacing.md,
     gap: Spacing.xl,
   },
   earnItem: { alignItems: 'center', gap: 4 },
-  earnDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.2)' },
+  earnDivider: { width: 1, backgroundColor: 'rgba(255,255,255,0.3)' },
   howCard: { marginHorizontal: Spacing.xl, padding: Spacing.lg, marginBottom: Spacing.lg },
   historyRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,

@@ -1,5 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Types } from 'mongoose';
+import { Document, Schema as MongooseSchema, Types } from 'mongoose';
 import { SkillLevel, SportType, UserRole, PlanTier } from '@yallaplay/shared-types';
 
 export type UserDocument = User & Document;
@@ -27,15 +27,8 @@ export class User {
   @Prop({ type: [String], enum: SportType, default: [] })
   preferredSports: string[];
 
-  @Prop({
-    type: {
-      type: String,
-      enum: ['Point'],
-      default: 'Point',
-    },
-    coordinates: { type: [Number] },
-  })
-  location?: { type: string; coordinates: [number, number] };
+  @Prop({ type: MongooseSchema.Types.Mixed, default: null })
+  location?: { type: string; coordinates: [number, number] } | null;
 
   @Prop({ type: Number, default: 0, min: 0 })
   points: number;
@@ -66,8 +59,8 @@ export class User {
 
 export const UserSchema = SchemaFactory.createForClass(User);
 
-// Geospatial index for nearby facilities
-UserSchema.index({ location: '2dsphere' });
+// Sparse so users without location are excluded from the index
+UserSchema.index({ location: '2dsphere' }, { sparse: true });
 UserSchema.index({ role: 1, isActive: 1 });
 
 // Never return sensitive fields in normal queries

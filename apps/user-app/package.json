@@ -43,10 +43,12 @@
     "react-native-screens": "~4.16.0",
     "react-native-svg": "15.12.1",
     "react-native-web": "^0.21.0",
+    "use-latest-callback": "^0.2.6",
     "zustand": "^4.5.2"
   },
   "devDependencies": {
     "@babel/core": "^7.24.0",
+    "@babel/plugin-transform-template-literals": "^7.27.1",
     "@types/react": "^19.1.10",
     "@types/react-native": "^0.73.0",
     "@yallaplay/config": "*",

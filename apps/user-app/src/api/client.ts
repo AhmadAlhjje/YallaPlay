@@ -1,4 +1,5 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
@@ -8,27 +9,46 @@ const SECURE_KEYS = {
   refreshToken: 'yp_refresh_token',
 } as const;
 
+// ── Platform-safe storage ────────────────────────────────────────────────────
+// expo-secure-store's deleteItemAsync uses a native method unavailable on web.
+// On web we fall back to localStorage (tokens are not sensitive in a browser context).
+
+const store = {
+  get: (key: string): Promise<string | null> => {
+    if (Platform.OS === 'web') return Promise.resolve(localStorage.getItem(key));
+    return SecureStore.getItemAsync(key);
+  },
+  set: (key: string, value: string): Promise<void> => {
+    if (Platform.OS === 'web') { localStorage.setItem(key, value); return Promise.resolve(); }
+    return SecureStore.setItemAsync(key, value);
+  },
+  del: (key: string): Promise<void> => {
+    if (Platform.OS === 'web') { localStorage.removeItem(key); return Promise.resolve(); }
+    return SecureStore.deleteItemAsync(key);
+  },
+};
+
 // ── Token helpers ────────────────────────────────────────────────────────────
 
 export async function getAccessToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(SECURE_KEYS.accessToken);
+  return store.get(SECURE_KEYS.accessToken);
 }
 
 export async function getRefreshToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(SECURE_KEYS.refreshToken);
+  return store.get(SECURE_KEYS.refreshToken);
 }
 
 export async function saveTokens(access: string, refresh: string): Promise<void> {
   await Promise.all([
-    SecureStore.setItemAsync(SECURE_KEYS.accessToken, access),
-    SecureStore.setItemAsync(SECURE_KEYS.refreshToken, refresh),
+    store.set(SECURE_KEYS.accessToken, access),
+    store.set(SECURE_KEYS.refreshToken, refresh),
   ]);
 }
 
 export async function clearTokens(): Promise<void> {
   await Promise.all([
-    SecureStore.deleteItemAsync(SECURE_KEYS.accessToken),
-    SecureStore.deleteItemAsync(SECURE_KEYS.refreshToken),
+    store.del(SECURE_KEYS.accessToken),
+    store.del(SECURE_KEYS.refreshToken),
   ]);
 }
 

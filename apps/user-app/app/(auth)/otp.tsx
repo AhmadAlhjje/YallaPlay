@@ -5,7 +5,6 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { useAuthStore } from '../../src/store/auth.store';
@@ -16,13 +15,12 @@ const RESEND_COOLDOWN = 60;
 
 export default function OtpScreen() {
   const { phone } = useLocalSearchParams<{ phone: string }>();
-  const [otp, setOtp]           = useState('');
-  const [loading, setLoading]   = useState(false);
+  const [otp, setOtp]             = useState('');
+  const [loading, setLoading]     = useState(false);
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN);
   const inputRef = useRef<TextInput>(null);
-  const { verifyOtp, sendOtp }  = useAuthStore();
+  const { verifyOtp, sendOtp }    = useAuthStore();
 
-  // Countdown timer for resend
   useEffect(() => {
     if (countdown <= 0) return;
     const t = setTimeout(() => setCountdown((c) => c - 1), 1000);
@@ -56,7 +54,6 @@ export default function OtpScreen() {
     }
   };
 
-  // Auto-submit when all 6 digits entered
   useEffect(() => {
     if (otp.length === OTP_LENGTH) handleVerify();
   }, [otp]);
@@ -65,11 +62,6 @@ export default function OtpScreen() {
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[Colors.background.primary, '#0D1535', Colors.background.primary]}
-        style={StyleSheet.absoluteFill}
-      />
-
       <SafeAreaView style={styles.safe}>
         <TouchableOpacity onPress={() => router.back()} style={styles.back}>
           <Text style={[Typography.bodyLg, { color: Colors.text.secondary }]}>← رجوع</Text>
@@ -155,22 +147,22 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: Radius.md,
     borderWidth: 1.5,
-    borderColor: Colors.glass.border,
-    backgroundColor: Colors.glass.subtle,
+    borderColor: Colors.border.default,
+    backgroundColor: Colors.background.secondary,
     alignItems: 'center',
     justifyContent: 'center',
   },
   digitBoxFilled: {
     borderColor: Colors.brand.primary,
-    backgroundColor: Colors.brand.primary + '15',
+    backgroundColor: Colors.brand.light,
   },
   digitBoxActive: {
     borderColor: Colors.brand.primary,
     shadowColor: Colors.brand.primary,
     shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   hiddenInput: {
     position: 'absolute',

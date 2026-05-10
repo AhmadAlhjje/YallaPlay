@@ -92,7 +92,6 @@ function BookingCard({ booking, onPress }: { booking: any; onPress: () => void }
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.8}>
       <GlassCard style={styles.card}>
-        {/* Top: facility name + status */}
         <View style={styles.cardRow}>
           <Text style={[Typography.h3, { color: Colors.text.primary, flex: 1 }]} numberOfLines={1}>
             {booking.facility?.name ?? '—'}
@@ -102,7 +101,6 @@ function BookingCard({ booking, onPress }: { booking: any; onPress: () => void }
           </View>
         </View>
 
-        {/* Details */}
         <View style={[styles.cardRow, { marginTop: Spacing.sm }]}>
           <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>📅 {booking.date}</Text>
           <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>
@@ -110,8 +108,7 @@ function BookingCard({ booking, onPress }: { booking: any; onPress: () => void }
           </Text>
         </View>
 
-        {/* Bottom: price + ref */}
-        <View style={[styles.cardRow, { marginTop: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.glass.border, paddingTop: Spacing.md }]}>
+        <View style={[styles.cardRow, { marginTop: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.border.default, paddingTop: Spacing.md }]}>
           <Text style={[Typography.numericMd, { color: Colors.brand.primary }]}>{booking.price} ر.س</Text>
           <Text style={[Typography.labelSm, { color: Colors.text.tertiary, letterSpacing: 2 }]}>#{ref}</Text>
         </View>
@@ -146,7 +143,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: Spacing.xl,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.glass.border,
+    borderBottomColor: Colors.border.default,
     marginBottom: Spacing.lg,
   },
   filterTab: {
@@ -169,7 +166,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
     borderRadius: Radius.full,
     borderWidth: 1.5, borderColor: Colors.brand.primary,
-    backgroundColor: Colors.brand.primary + '15',
+    backgroundColor: Colors.brand.light,
   },
   card: { padding: Spacing.lg, marginBottom: Spacing.md },
   cardRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },

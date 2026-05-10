@@ -13,6 +13,13 @@ config.resolver.nodeModulesPaths = [
   path.resolve(workspaceRoot, 'node_modules'),
 ];
 
+// Prevent duplicate React instances across the monorepo
+config.resolver.extraNodeModules = {
+  'react':        path.resolve(projectRoot, 'node_modules', 'react'),
+  'react-dom':    path.resolve(projectRoot, 'node_modules', 'react-dom'),
+  'react-native': path.resolve(projectRoot, 'node_modules', 'react-native'),
+};
+
 config.resolver.unstable_enablePackageExports = false;
 
 module.exports = config;

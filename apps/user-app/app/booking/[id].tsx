@@ -4,7 +4,6 @@ import {
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
 import QRCode from 'react-native-qrcode-svg';
 import * as Haptics from 'expo-haptics';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -14,11 +13,11 @@ import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  pending:   { label: 'معلّق',       color: Colors.warning,  bg: Colors.warningBg,  icon: '⏳' },
-  confirmed: { label: 'مؤكّد',       color: Colors.success,  bg: Colors.successBg,  icon: '✅' },
-  completed: { label: 'مكتمل',       color: Colors.info,     bg: Colors.glass.light, icon: '🏁' },
-  cancelled: { label: 'ملغي',        color: Colors.error,    bg: Colors.errorBg,    icon: '❌' },
-  no_show:   { label: 'لم يحضر',    color: Colors.text.tertiary, bg: Colors.glass.subtle, icon: '👻' },
+  pending:   { label: 'معلّق',    color: Colors.warning,       bg: Colors.warningBg,  icon: '⏳' },
+  confirmed: { label: 'مؤكّد',    color: Colors.success,       bg: Colors.successBg,  icon: '✅' },
+  completed: { label: 'مكتمل',    color: Colors.info,          bg: Colors.infoBg,     icon: '🏁' },
+  cancelled: { label: 'ملغي',     color: Colors.error,         bg: Colors.errorBg,    icon: '❌' },
+  no_show:   { label: 'لم يحضر', color: Colors.text.tertiary, bg: Colors.background.secondary, icon: '👻' },
 };
 
 const CANCEL_REASONS = [
@@ -77,18 +76,11 @@ export default function BookingDetailScreen() {
     shareMutation.mutate();
     const text = `حجزت ملعب ${booking.facility?.name} بتاريخ ${booking.date} الساعة ${booking.startTime} - ${booking.endTime} 🏟️`;
     const url = `whatsapp://send?text=${encodeURIComponent(text)}`;
-    Linking.openURL(url).catch(() =>
-      Alert.alert('تنبيه', 'تطبيق واتساب غير مثبّت'),
-    );
+    Linking.openURL(url).catch(() => Alert.alert('تنبيه', 'تطبيق واتساب غير مثبّت'));
   };
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[Colors.background.primary, '#0D1535', Colors.background.primary]}
-        style={StyleSheet.absoluteFill}
-      />
-
       <SafeAreaView style={styles.safe}>
         {/* Header */}
         <View style={styles.header}>
@@ -248,11 +240,11 @@ const styles = StyleSheet.create({
   qrCard: { alignItems: 'center', padding: Spacing.xl, marginBottom: Spacing.lg },
   qrWrapper: {
     padding: Spacing.lg, borderRadius: Radius.lg,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1, borderColor: Colors.glass.border,
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1, borderColor: Colors.border.default,
   },
   detailCard: { padding: Spacing.xl, marginBottom: Spacing.md },
-  divider: { height: 1, backgroundColor: Colors.glass.border, marginVertical: Spacing.md },
+  divider: { height: 1, backgroundColor: Colors.border.default, marginVertical: Spacing.md },
   actions: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md },
   whatsappBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
@@ -268,23 +260,23 @@ const styles = StyleSheet.create({
   },
   modalOverlay: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'flex-end',
   },
   modal: {
-    backgroundColor: Colors.background.elevated,
+    backgroundColor: Colors.background.primary,
     borderTopLeftRadius: 24, borderTopRightRadius: 24,
     paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl,
-    borderTopWidth: 1, borderTopColor: Colors.glass.border,
+    borderTopWidth: 1, borderTopColor: Colors.border.default,
   },
   reasonOption: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.glass.subtle,
+    paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.border.default,
   },
-  reasonActive: { backgroundColor: Colors.glass.subtle },
+  reasonActive: { backgroundColor: Colors.brand.light },
   radio: {
     width: 20, height: 20, borderRadius: 10,
-    borderWidth: 2, borderColor: Colors.glass.border,
+    borderWidth: 2, borderColor: Colors.border.default,
     alignItems: 'center', justifyContent: 'center',
   },
   radioActive: { borderColor: Colors.brand.primary },

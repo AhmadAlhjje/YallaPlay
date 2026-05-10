@@ -2,97 +2,66 @@ import { StyleSheet, ViewStyle } from 'react-native';
 import { Colors } from './colors';
 import { Radius } from './typography';
 
-// Reusable Glassmorphism layer styles.
-// Usage: combine GlassStyles.card with a BlurView wrapper.
-//
-// Pattern:
-//   <BlurView intensity={20} style={GlassStyles.blurContainer}>
-//     <View style={GlassStyles.card}>
-//       {children}
-//     </View>
-//   </BlurView>
-
 export const GlassStyles = StyleSheet.create({
-  // Full blur container — same borderRadius as the card
   blurContainer: {
-    overflow: 'hidden',
     borderRadius: Radius.xl,
+    overflow: 'hidden',
   },
-
-  // Primary card surface
   card: {
-    backgroundColor: Colors.glass.light,
+    backgroundColor: Colors.background.primary,
     borderWidth: 1,
-    borderColor: Colors.glass.border,
+    borderColor: Colors.border.default,
     borderRadius: Radius.xl,
     padding: 16,
   },
-
-  // Subtle card — list items, secondary cards
   cardSubtle: {
-    backgroundColor: Colors.glass.subtle,
+    backgroundColor: Colors.background.secondary,
     borderWidth: 1,
-    borderColor: Colors.glass.border,
+    borderColor: Colors.border.default,
     borderRadius: Radius.lg,
     padding: 12,
   },
-
-  // Prominent card — hero sections
   cardStrong: {
-    backgroundColor: Colors.glass.medium,
+    backgroundColor: Colors.background.primary,
     borderWidth: 1,
-    borderColor: Colors.glass.borderHover,
+    borderColor: Colors.border.default,
     borderRadius: Radius.xxl,
     padding: 20,
   },
-
-  // Inner shimmer line — top edge highlight
-  shimmer: {
-    position: 'absolute',
-    top: 0,
-    left: 16,
-    right: 16,
-    height: 1,
-    backgroundColor: Colors.glass.highlight,
-    borderRadius: 1,
-  },
-
-  // Pill badge
+  shimmer: { height: 0, width: 0 },
   pill: {
-    backgroundColor: Colors.glass.medium,
+    backgroundColor: Colors.background.secondary,
     borderWidth: 1,
-    borderColor: Colors.glass.border,
+    borderColor: Colors.border.default,
     borderRadius: Radius.full,
     paddingHorizontal: 12,
     paddingVertical: 6,
   },
-
-  // Bottom sheet / modal surface
   sheet: {
-    backgroundColor: Colors.background.elevated,
+    backgroundColor: Colors.background.primary,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
+    borderTopWidth: 1,
+    borderLeftWidth: 1,
+    borderRightWidth: 1,
     borderBottomWidth: 0,
+    borderColor: Colors.border.default,
     paddingTop: 12,
   },
 });
 
-// Shadow preset — gives depth beneath glass cards on dark backgrounds
 export const GlassShadow: ViewStyle = {
   shadowColor: '#000',
-  shadowOffset: { width: 0, height: 8 },
-  shadowOpacity: 0.4,
-  shadowRadius: 24,
-  elevation: 12,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.06,
+  shadowRadius: 8,
+  elevation: 3,
 };
 
-// Brand glow — used on CTA buttons
 export const BrandGlow: ViewStyle = {
   shadowColor: Colors.brand.primary,
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.5,
-  shadowRadius: 16,
-  elevation: 8,
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.2,
+  shadowRadius: 8,
+  elevation: 4,
 };

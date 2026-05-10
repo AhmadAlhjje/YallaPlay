@@ -47,11 +47,7 @@ export default function NotificationsScreen() {
 
   const handlePress = (notif: any) => {
     if (!notif.isRead) markOneMutation.mutate(notif._id);
-
-    // Navigate based on type
-    if (notif.bookingId) {
-      router.push(`/booking/${notif.bookingId}`);
-    }
+    if (notif.bookingId) router.push(`/booking/${notif.bookingId}`);
   };
 
   return (
@@ -72,7 +68,7 @@ export default function NotificationsScreen() {
             )}
           </View>
 
-          {unreadCount > 0 && (
+          {unreadCount > 0 ? (
             <TouchableOpacity
               onPress={() => markAllMutation.mutate()}
               disabled={markAllMutation.isPending}
@@ -81,7 +77,7 @@ export default function NotificationsScreen() {
                 {markAllMutation.isPending ? '...' : 'قراءة الكل'}
               </Text>
             </TouchableOpacity>
-          )}
+          ) : <View style={{ width: 50 }} />}
         </View>
 
         {isLoading ? (
@@ -130,7 +126,6 @@ function NotificationRow({ notif, onPress }: { notif: any; onPress: () => void }
           !notif.isRead && styles.notifUnread,
         ]}
       >
-        {/* Unread dot */}
         {!notif.isRead && <View style={styles.unreadDot} />}
 
         <View style={[styles.iconWrapper, { backgroundColor: config.color + '22' }]}>

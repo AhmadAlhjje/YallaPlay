@@ -1,6 +1,6 @@
 import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
-import { WeatherService } from './weather.service';
+import { WeatherService, WeatherData, DayForecast } from './weather.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Weather')
@@ -14,13 +14,13 @@ export class WeatherController {
   @ApiOperation({ summary: 'Current weather + 7-day forecast (1hr Redis cache)' })
   @ApiQuery({ name: 'lat', description: 'Latitude', type: Number })
   @ApiQuery({ name: 'lon', description: 'Longitude', type: Number })
-  getCurrent(@Query('lat') lat: string, @Query('lon') lon: string) {
+  getCurrent(@Query('lat') lat: string, @Query('lon') lon: string): Promise<WeatherData> {
     return this.weatherService.getCurrentWeather(parseFloat(lat), parseFloat(lon));
   }
 
   @Get('forecast')
   @ApiOperation({ summary: '7-day forecast only' })
-  getForecast(@Query('lat') lat: string, @Query('lon') lon: string) {
+  getForecast(@Query('lat') lat: string, @Query('lon') lon: string): Promise<DayForecast[]> {
     return this.weatherService.getWeeklyForecast(parseFloat(lat), parseFloat(lon));
   }
 }

@@ -1,6 +1,5 @@
 import { Tabs, Redirect } from 'expo-router';
 import { View, Text, StyleSheet, Platform } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { useAuthStore } from '../../src/store/auth.store';
 import { Colors, Radius } from '../../src/theme';
 
@@ -25,11 +24,7 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarStyle: styles.tabBar,
         tabBarBackground: () => (
-          Platform.OS === 'ios' ? (
-            <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-          ) : (
-            <View style={[StyleSheet.absoluteFill, { backgroundColor: Colors.background.elevated + 'F0' }]} />
-          )
+          <View style={[StyleSheet.absoluteFill, styles.tabBarBg]} />
         ),
         tabBarShowLabel: false,
         tabBarActiveTintColor: Colors.brand.primary,
@@ -58,12 +53,18 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    position: 'absolute',
     borderTopWidth: 1,
-    borderTopColor: Colors.glass.border,
-    backgroundColor: 'transparent',
+    borderTopColor: Colors.border.default,
+    backgroundColor: Colors.background.primary,
     height: Platform.OS === 'ios' ? 88 : 68,
-    elevation: 0,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+  },
+  tabBarBg: {
+    backgroundColor: Colors.background.primary,
   },
   tabIcon: {
     alignItems: 'center',

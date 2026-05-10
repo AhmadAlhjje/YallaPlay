@@ -1,72 +1,66 @@
 import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { GlassCard } from './GlassCard';
-import { Colors, Typography, Spacing } from '../theme';
+import { Colors, Typography, Spacing, Radius } from '../theme';
 import { weatherApi } from '../api/weather.api';
 import { useLocationStore } from '../store/location.store';
 
 export function WeatherWidget() {
   const { coords } = useLocationStore();
-
   const { data, isLoading } = useQuery({
     queryKey: ['weather', coords?.latitude, coords?.longitude],
     queryFn: () => weatherApi.getCurrent(coords!.latitude, coords!.longitude),
     enabled: !!coords,
-    staleTime: 60 * 60 * 1000, // 1 hour — matches server cache
+    staleTime: 60 * 60 * 1000,
   });
 
   if (!coords) return null;
-
   const weather = data?.data?.data;
 
   return (
-    <GlassCard style={styles.card} intensity={25}>
+    <View style={styles.card}>
       {isLoading || !weather ? (
-        <ActivityIndicator color={Colors.brand.primary} />
+        <ActivityIndicator color={Colors.brand.primary} size="small" />
       ) : (
         <View style={styles.row}>
           <View>
-            <Text style={[Typography.displayMd, { color: Colors.text.primary }]}>
-              {weather.temperature}°
-            </Text>
-            <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>
-              {weather.city}
-            </Text>
-            <Text style={[Typography.bodySm, { color: Colors.text.tertiary }]}>
-              {weather.description}
-            </Text>
+            <Text style={styles.temp}>{weather.temperature}°</Text>
+            <Text style={styles.city}>{weather.city}</Text>
+            <Text style={styles.desc}>{weather.description}</Text>
           </View>
           <View style={styles.stats}>
-            <WeatherStat icon="💧" label="رطوبة" value={`${weather.humidity}%`} />
-            <WeatherStat icon="💨" label="رياح" value={`${weather.windSpeed} كم/س`} />
-            <WeatherStat icon="🌡" label="يشعر" value={`${weather.feelsLike}°`} />
+            {[
+              { label: 'رطوبة', value: `${weather.humidity}%` },
+              { label: 'رياح',  value: `${weather.windSpeed} كم/س` },
+              { label: 'يشعر', value: `${weather.feelsLike}°` },
+            ].map((s) => (
+              <View key={s.label} style={styles.stat}>
+                <Text style={styles.statLabel}>{s.label}</Text>
+                <Text style={styles.statValue}>{s.value}</Text>
+              </View>
+            ))}
           </View>
         </View>
       )}
-    </GlassCard>
-  );
-}
-
-function WeatherStat({ icon, label, value }: { icon: string; label: string; value: string }) {
-  return (
-    <View style={styles.stat}>
-      <Text style={{ fontSize: 16 }}>{icon}</Text>
-      <View>
-        <Text style={[Typography.labelSm, { color: Colors.text.tertiary }]}>{label}</Text>
-        <Text style={[Typography.labelMd, { color: Colors.text.secondary }]}>{value}</Text>
-      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: { marginBottom: Spacing.lg },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  card: {
+    backgroundColor: Colors.brand.light,
+    borderRadius: Radius.xl,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.brand.border,
   },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  temp: { fontSize: 32, fontWeight: '700', color: Colors.brand.dark },
+  city: { ...Typography.bodyMd, color: Colors.brand.dark, marginTop: 2 },
+  desc: { ...Typography.bodySm, color: Colors.brand.primary, marginTop: 2 },
   stats: { gap: Spacing.sm },
-  stat: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  stat: { alignItems: 'flex-end' },
+  statLabel: { ...Typography.labelSm, color: Colors.brand.primary },
+  statValue: { ...Typography.labelMd, color: Colors.brand.dark },
 });

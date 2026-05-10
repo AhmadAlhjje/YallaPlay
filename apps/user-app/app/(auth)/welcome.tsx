@@ -1,29 +1,15 @@
 import React from 'react';
-import {
-  View, Text, StyleSheet, Dimensions, ImageBackground,
-} from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { router } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
-import { Colors, Typography, Spacing } from '../../src/theme';
+import { Colors, Typography, Spacing, Radius } from '../../src/theme';
 
 const { height } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
-      {/* Background — dark gradient with faint sport imagery */}
-      <LinearGradient
-        colors={[Colors.background.primary, '#0D1535', Colors.background.primary]}
-        locations={[0, 0.5, 1]}
-        style={StyleSheet.absoluteFill}
-      />
-
-      {/* Glow orbs for depth */}
-      <View style={[styles.orb, styles.orbTop]} />
-      <View style={[styles.orb, styles.orbBottom]} />
-
       <SafeAreaView style={styles.safe}>
         {/* Logo / Brand */}
         <View style={styles.logoSection}>
@@ -70,23 +56,6 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background.primary },
   safe: { flex: 1, justifyContent: 'space-between', paddingHorizontal: Spacing.xl },
-  orb: {
-    position: 'absolute',
-    width: 300,
-    height: 300,
-    borderRadius: 150,
-    opacity: 0.12,
-  },
-  orbTop: {
-    top: -80,
-    right: -60,
-    backgroundColor: Colors.brand.primary,
-  },
-  orbBottom: {
-    bottom: -60,
-    left: -80,
-    backgroundColor: Colors.brand.secondary,
-  },
   logoSection: {
     alignItems: 'center',
     paddingTop: height * 0.1,
@@ -95,9 +64,9 @@ const styles = StyleSheet.create({
     width: 90,
     height: 90,
     borderRadius: 28,
-    backgroundColor: Colors.glass.medium,
-    borderWidth: 1,
-    borderColor: Colors.glass.border,
+    backgroundColor: Colors.brand.light,
+    borderWidth: 2,
+    borderColor: Colors.brand.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.lg,
@@ -118,10 +87,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: Spacing.md,
-    backgroundColor: Colors.glass.subtle,
+    backgroundColor: Colors.background.secondary,
     borderWidth: 1,
-    borderColor: Colors.glass.border,
-    borderRadius: 16,
+    borderColor: Colors.border.default,
+    borderRadius: Radius.lg,
     padding: Spacing.lg,
   },
   ctas: { paddingBottom: Spacing.xl },

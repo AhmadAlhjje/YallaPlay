@@ -4,9 +4,7 @@ import {
   KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg';
 import * as Haptics from 'expo-haptics';
 import { bookingsApi } from '../../src/api/bookings.api';
@@ -15,8 +13,8 @@ import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
 
 const PAYMENT_METHODS = [
-  { key: 'cash', label: 'كاش', icon: '💵', desc: 'ادفع عند الوصول' },
-  { key: 'card', label: 'بطاقة', icon: '💳', desc: 'فيزا / مدى' },
+  { key: 'cash',      label: 'كاش',      icon: '💵', desc: 'ادفع عند الوصول' },
+  { key: 'card',      label: 'بطاقة',    icon: '💳', desc: 'فيزا / مدى' },
   { key: 'apple_pay', label: 'Apple Pay', icon: '🍎', desc: 'ادفع بـ Apple Pay' },
 ] as const;
 
@@ -24,7 +22,6 @@ type PaymentMethod = typeof PAYMENT_METHODS[number]['key'];
 type Step = 1 | 2 | 3;
 
 export default function NewBookingScreen() {
-  const insets = useSafeAreaInsets();
   const {
     facilityId, facilityName, date, startTime, endTime, price, sport,
   } = useLocalSearchParams<{
@@ -32,12 +29,12 @@ export default function NewBookingScreen() {
     startTime: string; endTime: string; price: string; sport: string;
   }>();
 
-  const [step, setStep]                 = useState<Step>(1);
+  const [step, setStep]                   = useState<Step>(1);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
-  const [loading, setLoading]           = useState(false);
-  const [bookingId, setBookingId]       = useState<string | null>(null);
-  const [qrToken, setQrToken]           = useState<string | null>(null);
-  const [bookingRef, setBookingRef]     = useState<string | null>(null);
+  const [loading, setLoading]             = useState(false);
+  const [bookingId, setBookingId]         = useState<string | null>(null);
+  const [qrToken, setQrToken]             = useState<string | null>(null);
+  const [bookingRef, setBookingRef]       = useState<string | null>(null);
 
   const totalPrice = parseFloat(price ?? '0');
 
@@ -49,7 +46,7 @@ export default function NewBookingScreen() {
         date,
         startTime,
         sport: sport as any,
-        paymentMethod,
+        paymentMethod: paymentMethod as any,
       });
       const booking = res.data?.data;
       setBookingId(booking._id);
@@ -68,23 +65,14 @@ export default function NewBookingScreen() {
 
   const handleShareWhatsapp = async () => {
     if (!bookingId) return;
-    try {
-      await bookingsApi.markSharedWhatsapp(bookingId);
-    } catch { /* ignore */ }
+    try { await bookingsApi.markSharedWhatsapp(bookingId); } catch { /* ignore */ }
     const text = `حجزت ملعب ${facilityName} بتاريخ ${date} الساعة ${startTime} - ${endTime} 🏟️`;
     const url = `whatsapp://send?text=${encodeURIComponent(text)}`;
-    Linking.openURL(url).catch(() =>
-      Alert.alert('تنبيه', 'تطبيق واتساب غير مثبّت'),
-    );
+    Linking.openURL(url).catch(() => Alert.alert('تنبيه', 'تطبيق واتساب غير مثبّت'));
   };
 
   return (
     <View style={styles.container}>
-      <LinearGradient
-        colors={[Colors.background.primary, '#0D1535', Colors.background.primary]}
-        style={StyleSheet.absoluteFill}
-      />
-
       <SafeAreaView style={styles.safe}>
         {/* Header */}
         <View style={styles.header}>
@@ -96,7 +84,6 @@ export default function NewBookingScreen() {
           <Text style={[Typography.h3, { color: Colors.text.primary }]}>
             {step === 1 ? 'تفاصيل الحجز' : step === 2 ? 'طريقة الدفع' : 'تم الحجز!'}
           </Text>
-          {/* Step indicator */}
           <View style={styles.stepRow}>
             {[1, 2, 3].map((s) => (
               <View key={s} style={[styles.stepDot, step >= s && styles.stepDotActive]} />
@@ -122,7 +109,7 @@ export default function NewBookingScreen() {
                   <InfoRow icon="⏱️" label="المدة" value={calcDuration(startTime, endTime)} />
                   {sport && <InfoRow icon="🏟️" label="الرياضة" value={sport} />}
                   <View style={styles.priceDivider} />
-                  <View style={[styles.priceRow]}>
+                  <View style={styles.priceRow}>
                     <Text style={[Typography.h2, { color: Colors.brand.primary }]}>
                       {totalPrice} ر.س
                     </Text>
@@ -130,7 +117,7 @@ export default function NewBookingScreen() {
                   </View>
                 </GlassCard>
 
-                <GlassCard style={[styles.summaryCard, { backgroundColor: Colors.successBg, borderColor: Colors.success + '33' }]}>
+                <GlassCard style={{ ...styles.summaryCard, backgroundColor: Colors.successBg, borderColor: Colors.success + '33' }}>
                   <Text style={[Typography.labelMd, { color: Colors.success }]}>
                     ✅ ستحصل على 5 نقاط ولاء بعد تأكيد الحجز
                   </Text>
@@ -262,28 +249,28 @@ const styles = StyleSheet.create({
   stepRow: { flexDirection: 'row', gap: 6, marginTop: Spacing.sm },
   stepDot: {
     width: 24, height: 4, borderRadius: 2,
-    backgroundColor: Colors.glass.border,
+    backgroundColor: Colors.border.default,
   },
   stepDotActive: { backgroundColor: Colors.brand.primary },
   scroll: { paddingTop: Spacing.sm },
   summaryCard: { marginBottom: Spacing.md, padding: Spacing.xl },
-  priceDivider: { height: 1, backgroundColor: Colors.glass.border, marginVertical: Spacing.md },
+  priceDivider: { height: 1, backgroundColor: Colors.border.default, marginVertical: Spacing.md },
   priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   paymentOption: {
     flexDirection: 'row', alignItems: 'center',
     padding: Spacing.lg,
     borderRadius: Radius.lg,
-    borderWidth: 1.5, borderColor: Colors.glass.border,
-    backgroundColor: Colors.glass.subtle,
+    borderWidth: 1.5, borderColor: Colors.border.default,
+    backgroundColor: Colors.background.secondary,
     marginBottom: Spacing.md,
   },
   paymentOptionActive: {
     borderColor: Colors.brand.primary,
-    backgroundColor: Colors.brand.primary + '12',
+    backgroundColor: Colors.brand.light,
   },
   radio: {
     width: 22, height: 22, borderRadius: 11,
-    borderWidth: 2, borderColor: Colors.glass.border,
+    borderWidth: 2, borderColor: Colors.border.default,
     alignItems: 'center', justifyContent: 'center',
   },
   radioActive: { borderColor: Colors.brand.primary },
@@ -293,8 +280,8 @@ const styles = StyleSheet.create({
   qrWrapper: {
     padding: Spacing.lg,
     borderRadius: Radius.lg,
-    backgroundColor: 'rgba(255,255,255,0.06)',
-    borderWidth: 1, borderColor: Colors.glass.border,
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1, borderColor: Colors.border.default,
   },
   actionRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xl, alignItems: 'center' },
   whatsappBtn: {

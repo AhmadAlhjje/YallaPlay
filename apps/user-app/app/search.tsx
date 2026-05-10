@@ -15,10 +15,10 @@ import type { SportType } from '@yallaplay/shared-types';
 
 const SPORTS: SportType[] = ['football', 'basketball', 'tennis', 'volleyball', 'padel', 'squash'];
 const SORT_OPTIONS = [
-  { key: 'popular', label: 'الأشهر' },
-  { key: 'nearest', label: 'الأقرب' },
+  { key: 'popular',   label: 'الأشهر' },
+  { key: 'nearest',   label: 'الأقرب' },
   { key: 'price_asc', label: 'الأرخص' },
-  { key: 'rating', label: 'الأعلى تقييماً' },
+  { key: 'rating',    label: 'الأعلى تقييماً' },
 ] as const;
 
 type SortKey = typeof SORT_OPTIONS[number]['key'];
@@ -27,10 +27,10 @@ export default function SearchScreen() {
   const params = useLocalSearchParams<{ query?: string; sport?: string; sortBy?: string }>();
   const { coords } = useLocationStore();
 
-  const [search, setSearch] = useState(params.query ?? '');
-  const [sport, setSport]   = useState<SportType | undefined>(params.sport as SportType | undefined);
-  const [sortBy, setSortBy] = useState<SortKey>((params.sortBy as SortKey) ?? 'popular');
-  const [page, setPage]     = useState(1);
+  const [search, setSearch]       = useState(params.query ?? '');
+  const [sport, setSport]         = useState<SportType | undefined>(params.sport as SportType | undefined);
+  const [sortBy, setSortBy]       = useState<SortKey>((params.sortBy as SortKey) ?? 'popular');
+  const [page, setPage]           = useState(1);
   const [inputText, setInputText] = useState(params.query ?? '');
 
   const { data, isLoading, isFetching } = useQuery({
@@ -161,7 +161,6 @@ export default function SearchScreen() {
               <FacilityCard
                 facility={item}
                 onPress={() => router.push(`/facility/${item._id}`)}
-                style={{ marginBottom: Spacing.md }}
               />
             )}
             onEndReached={handleLoadMore}
@@ -200,8 +199,8 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.glass.subtle,
-    borderWidth: 1, borderColor: Colors.glass.border,
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1, borderColor: Colors.border.default,
     borderRadius: Radius.lg,
     paddingHorizontal: Spacing.md,
     paddingVertical: 10,
@@ -220,12 +219,12 @@ const styles = StyleSheet.create({
   sortTab: {
     paddingHorizontal: 14, paddingVertical: 7,
     borderRadius: Radius.full,
-    borderWidth: 1, borderColor: Colors.glass.border,
-    backgroundColor: Colors.glass.subtle,
+    borderWidth: 1, borderColor: Colors.border.default,
+    backgroundColor: Colors.background.secondary,
   },
   sortTabActive: {
     borderColor: Colors.brand.primary,
-    backgroundColor: Colors.brand.primary + '18',
+    backgroundColor: Colors.brand.light,
   },
   empty: {
     flex: 1, alignItems: 'center', justifyContent: 'center',

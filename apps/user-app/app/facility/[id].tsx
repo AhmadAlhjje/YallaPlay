@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, FlatList,
   Dimensions, Alert, Platform, Linking,
@@ -7,8 +7,6 @@ import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapSection } from '../../src/components/MapSection';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
 import * as Haptics from 'expo-haptics';
 import { useQuery } from '@tanstack/react-query';
 import { facilitiesApi } from '../../src/api/facilities.api';
@@ -127,7 +125,7 @@ export default function FacilityDetailScreen() {
 
   return (
     <View style={styles.container}>
-      <ScrollView showsVerticalScrollIndicator={false} stickyHeaderIndices={[0]}>
+      <ScrollView showsVerticalScrollIndicator={false}>
         {/* Image Gallery */}
         <View style={styles.galleryContainer}>
           <ScrollView
@@ -151,11 +149,8 @@ export default function FacilityDetailScreen() {
             ))}
           </ScrollView>
 
-          {/* Gradient overlay */}
-          <LinearGradient
-            colors={['transparent', 'rgba(10,14,26,0.85)']}
-            style={styles.heroGradient}
-          />
+          {/* Dark overlay at bottom */}
+          <View style={styles.heroOverlay} />
 
           {/* Back button */}
           <SafeAreaView style={StyleSheet.absoluteFill} pointerEvents="box-none">
@@ -163,9 +158,7 @@ export default function FacilityDetailScreen() {
               onPress={() => router.back()}
               style={[styles.backBtn, { top: insets.top + 8 }]}
             >
-              <BlurView intensity={60} style={styles.backBtnBlur}>
-                <Text style={{ color: Colors.text.primary, fontSize: 16 }}>← </Text>
-              </BlurView>
+              <Text style={styles.backBtnText}>← </Text>
             </TouchableOpacity>
           </SafeAreaView>
 
@@ -311,7 +304,6 @@ export default function FacilityDetailScreen() {
       {/* Bottom CTA */}
       {selectedSlot && (
         <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
-          <BlurView intensity={80} style={StyleSheet.absoluteFill} />
           <View style={styles.bottomContent}>
             <View>
               <Text style={[Typography.labelMd, { color: Colors.text.secondary }]}>
@@ -323,9 +315,7 @@ export default function FacilityDetailScreen() {
             </View>
             {canBook ? (
               <TouchableOpacity onPress={handleBookNow} style={styles.bookBtn}>
-                <LinearGradient colors={Colors.brand.gradient} style={styles.bookBtnGrad}>
-                  <Text style={[Typography.labelLg, { color: '#fff' }]}>احجز الآن</Text>
-                </LinearGradient>
+                <Text style={[Typography.labelLg, { color: '#fff' }]}>احجز الآن</Text>
               </TouchableOpacity>
             ) : selectedSlotBooked ? (
               <TouchableOpacity
@@ -358,23 +348,27 @@ function StatItem({ icon, label, value, onPress }: { icon: string; label: string
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background.primary },
   center: { alignItems: 'center', justifyContent: 'center' },
-  galleryContainer: { width: SCREEN_W, height: 280 },
+  galleryContainer: { width: SCREEN_W, height: 280, position: 'relative' },
   heroImage: { width: SCREEN_W, height: 280 },
-  heroGradient: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 120 },
-  backBtn: { position: 'absolute', left: Spacing.xl, zIndex: 10 },
-  backBtnBlur: {
-    width: 40, height: 40, borderRadius: 20,
-    alignItems: 'center', justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1, borderColor: Colors.glass.border,
+  heroOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: 80,
+    backgroundColor: 'rgba(0,0,0,0.35)',
   },
+  backBtn: {
+    position: 'absolute', left: Spacing.xl, zIndex: 10,
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: Colors.background.primary,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 4, elevation: 4,
+  },
+  backBtnText: { color: Colors.text.primary, fontSize: 16 },
   dots: {
     position: 'absolute', bottom: 12,
     flexDirection: 'row', alignSelf: 'center', gap: 6,
   },
   dot: {
     width: 6, height: 6, borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.5)',
   },
   dotActive: { backgroundColor: '#fff', width: 18 },
   body: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl },
@@ -391,23 +385,15 @@ const styles = StyleSheet.create({
   },
   statsCard: { marginTop: Spacing.xl, flexDirection: 'row', padding: Spacing.lg },
   statItem: { flex: 1, alignItems: 'center' },
-  divider: { width: 1, backgroundColor: Colors.glass.border, marginVertical: 4 },
+  divider: { width: 1, backgroundColor: Colors.border.default, marginVertical: 4 },
   sectionTitle: { color: Colors.text.primary, marginTop: Spacing.xl, marginBottom: Spacing.md },
-  mapContainer: { borderRadius: Radius.lg, overflow: 'hidden', marginBottom: Spacing.md },
-  map: { width: '100%', height: 180 },
-  mapOverlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: Colors.background.primary + 'CC',
-    paddingVertical: 10, paddingHorizontal: Spacing.xl,
-    alignItems: 'flex-end',
-  },
   dateChip: {
     alignItems: 'center',
     paddingHorizontal: 14, paddingVertical: 10,
     borderRadius: Radius.md,
     borderWidth: 1,
-    borderColor: Colors.glass.border,
-    backgroundColor: Colors.glass.subtle,
+    borderColor: Colors.border.default,
+    backgroundColor: Colors.background.secondary,
     minWidth: 72,
   },
   dateChipActive: {
@@ -422,8 +408,9 @@ const styles = StyleSheet.create({
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    borderTopWidth: 1, borderTopColor: Colors.glass.border,
-    overflow: 'hidden',
+    borderTopWidth: 1, borderTopColor: Colors.border.default,
+    backgroundColor: Colors.background.primary,
+    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, elevation: 8,
   },
   bottomContent: {
     flexDirection: 'row',
@@ -436,18 +423,14 @@ const styles = StyleSheet.create({
     borderRadius: Radius.lg,
     overflow: 'hidden',
     minWidth: 140,
-  },
-  bookBtnGrad: {
+    backgroundColor: Colors.brand.primary,
     paddingHorizontal: Spacing.xl,
     paddingVertical: 14,
     alignItems: 'center',
   },
   waitlistBtn: {
+    backgroundColor: Colors.brand.light,
     borderWidth: 1.5,
     borderColor: Colors.brand.primary,
-    paddingHorizontal: Spacing.xl,
-    paddingVertical: 14,
-    alignItems: 'center',
-    backgroundColor: Colors.brand.primary + '15',
   },
 });
