@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
@@ -6,17 +7,36 @@ const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v
 const ACCESS_KEY  = 'yp_owner_access';
 const REFRESH_KEY = 'yp_owner_refresh';
 
-export const getAccessToken  = () => SecureStore.getItemAsync(ACCESS_KEY);
-export const getRefreshToken = () => SecureStore.getItemAsync(REFRESH_KEY);
+// ── Platform-safe storage ────────────────────────────────────────────────────
+// expo-secure-store's deleteItemAsync uses a native method unavailable on web.
+// On web we fall back to localStorage.
+
+const store = {
+  get: (key: string): Promise<string | null> => {
+    if (Platform.OS === 'web') return Promise.resolve(localStorage.getItem(key));
+    return SecureStore.getItemAsync(key);
+  },
+  set: (key: string, value: string): Promise<void> => {
+    if (Platform.OS === 'web') { localStorage.setItem(key, value); return Promise.resolve(); }
+    return SecureStore.setItemAsync(key, value);
+  },
+  del: (key: string): Promise<void> => {
+    if (Platform.OS === 'web') { localStorage.removeItem(key); return Promise.resolve(); }
+    return SecureStore.deleteItemAsync(key);
+  },
+};
+
+export const getAccessToken  = () => store.get(ACCESS_KEY);
+export const getRefreshToken = () => store.get(REFRESH_KEY);
 export const saveTokens = (access: string, refresh: string) =>
   Promise.all([
-    SecureStore.setItemAsync(ACCESS_KEY, access),
-    SecureStore.setItemAsync(REFRESH_KEY, refresh),
+    store.set(ACCESS_KEY, access),
+    store.set(REFRESH_KEY, refresh),
   ]);
 export const clearTokens = () =>
   Promise.all([
-    SecureStore.deleteItemAsync(ACCESS_KEY),
-    SecureStore.deleteItemAsync(REFRESH_KEY),
+    store.del(ACCESS_KEY),
+    store.del(REFRESH_KEY),
   ]);
 
 export const apiClient = axios.create({ baseURL: BASE_URL });

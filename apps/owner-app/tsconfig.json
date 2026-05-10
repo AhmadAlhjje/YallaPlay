@@ -3,7 +3,9 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": ["ESNext"],
+    "lib": [
+      "ESNext"
+    ],
     "jsx": "react-native",
     "strict": true,
     "allowJs": true,
@@ -14,8 +16,19 @@
     "noEmit": true,
     "incremental": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@yallaplay/shared-types": ["../../packages/shared-types/src"]
+      "@/*": [
+        "./src/*"
+      ],
+      "@yallaplay/shared-types": [
+        "../../packages/shared-types/src"
+      ]
     }
-  }
+  },
+  "extends": "expo/tsconfig.base",
+  "include": [
+    "**/*.ts",
+    "**/*.tsx",
+    ".expo/types/**/*.ts",
+    "expo-env.d.ts"
+  ]
 }
