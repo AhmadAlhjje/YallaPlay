@@ -1,7 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
 import Cookies from 'js-cookie';
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const ACCESS_KEY  = 'yp_admin_access';
 const REFRESH_KEY = 'yp_admin_refresh';

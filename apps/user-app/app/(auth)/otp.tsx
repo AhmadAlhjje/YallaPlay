@@ -1,7 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  View, Text, TextInput, StyleSheet, TouchableOpacity, Alert,
-  KeyboardAvoidingView, Platform,
+  View,
+  Text,
+  TextInput,
+  StyleSheet,
+  TouchableOpacity,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -15,11 +21,11 @@ const RESEND_COOLDOWN = 60;
 
 export default function OtpScreen() {
   const { phone } = useLocalSearchParams<{ phone: string }>();
-  const [otp, setOtp]             = useState('');
-  const [loading, setLoading]     = useState(false);
+  const [otp, setOtp] = useState('');
+  const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(RESEND_COOLDOWN);
   const inputRef = useRef<TextInput>(null);
-  const { verifyOtp, sendOtp }    = useAuthStore();
+  const { verifyOtp, sendOtp } = useAuthStore();
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -36,7 +42,10 @@ export default function OtpScreen() {
       router.replace('/(tabs)');
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      Alert.alert('رمز غير صحيح', err?.response?.data?.message ?? 'يرجى التحقق من الرمز وإعادة المحاولة');
+      Alert.alert(
+        'رمز غير صحيح',
+        err?.response?.data?.message ?? 'يرجى التحقق من الرمز وإعادة المحاولة',
+      );
       setOtp('');
     } finally {
       setLoading(false);
@@ -63,7 +72,11 @@ export default function OtpScreen() {
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safe}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.back}>
+        <TouchableOpacity
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(auth)/login'))}
+          style={styles.back}
+        >
+          {' '}
           <Text style={[Typography.bodyLg, { color: Colors.text.secondary }]}>← رجوع</Text>
         </TouchableOpacity>
 
@@ -120,7 +133,12 @@ export default function OtpScreen() {
           />
 
           <TouchableOpacity onPress={handleResend} disabled={countdown > 0} style={styles.resend}>
-            <Text style={[Typography.bodyMd, { color: countdown > 0 ? Colors.text.tertiary : Colors.brand.primary }]}>
+            <Text
+              style={[
+                Typography.bodyMd,
+                { color: countdown > 0 ? Colors.text.tertiary : Colors.brand.primary },
+              ]}
+            >
               {countdown > 0 ? `إعادة الإرسال بعد ${countdown}ث` : 'إعادة إرسال الرمز'}
             </Text>
           </TouchableOpacity>
