@@ -246,12 +246,17 @@ export class BookingsService {
       },
     );
 
-    // Revoke points if they were granted
+    // Revoke points — confirmed bookings keep 1 consolation point
     if (booking.pointsEarned > 0) {
-      await this.userModel.updateOne(
-        { _id: booking.userId },
-        { $inc: { points: -booking.pointsEarned } },
-      );
+      const pointsToRevoke = booking.status === 'confirmed'
+        ? Math.max(0, booking.pointsEarned - 1)
+        : booking.pointsEarned;
+      if (pointsToRevoke > 0) {
+        await this.userModel.updateOne(
+          { _id: booking.userId },
+          { $inc: { points: -pointsToRevoke } },
+        );
+      }
     }
 
     // Fire-and-forget notifications

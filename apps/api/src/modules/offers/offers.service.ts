@@ -105,6 +105,15 @@ export class OffersService {
     await this.offerModel.updateOne({ _id: offerId }, { isActive: false });
   }
 
+  async getActiveOffers(limit = 10): Promise<OfferDocument[]> {
+    return this.offerModel
+      .find({ isActive: true, expiresAt: { $gt: new Date() } })
+      .populate('facilityId', 'name address images sports rating pricePerSlot')
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean() as unknown as OfferDocument[];
+  }
+
   // Used by FacilitiesService and BookingsService to resolve the price of a slot
   async resolveSlotPrice(
     facilityId: string,

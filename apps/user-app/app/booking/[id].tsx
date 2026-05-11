@@ -71,7 +71,7 @@ export default function BookingDetailScreen() {
   }
 
   const status = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending;
-  const canCancel = booking.status === 'pending' || booking.status === 'confirmed';
+  const canCancel = ['pending', 'pending_payment', 'confirmed'].includes(booking.status);
   const ref = booking.bookingRef ?? booking._id.slice(-8).toUpperCase();
 
   const handleShareWhatsapp = () => {
@@ -180,9 +180,18 @@ export default function BookingDetailScreen() {
             <Text style={[Typography.h3, { color: Colors.text.primary, marginBottom: Spacing.sm }]}>
               إلغاء الحجز
             </Text>
-            <Text style={[Typography.bodyMd, { color: Colors.text.secondary, marginBottom: Spacing.xl }]}>
-              سيتم استرداد النقاط إن وجدت. اختر سبب الإلغاء:
-            </Text>
+            {booking.status === 'confirmed' ? (
+              <View style={styles.cancelWarning}>
+                <Ionicons name="warning-outline" size={18} color={Colors.warning} />
+                <Text style={[Typography.bodyMd, { color: Colors.warning, flex: 1 }]}>
+                  ستفقد مبلغ الحجز بشكل نهائي، لكن ستحتفظ بنقطة واحدة تعويضاً
+                </Text>
+              </View>
+            ) : (
+              <Text style={[Typography.bodyMd, { color: Colors.text.secondary, marginBottom: Spacing.xl }]}>
+                سيتم إلغاء الحجز. اختر سبب الإلغاء:
+              </Text>
+            )}
             {CANCEL_REASONS.map((reason) => (
               <TouchableOpacity
                 key={reason}
@@ -295,4 +304,9 @@ const styles = StyleSheet.create({
   radioActive: { borderColor: Colors.brand.primary },
   radioDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: Colors.brand.primary },
   dismissBtn: { alignItems: 'center', paddingVertical: Spacing.lg },
+  cancelWarning: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    backgroundColor: Colors.warningBg, borderRadius: Radius.md,
+    padding: Spacing.md, marginBottom: Spacing.xl,
+  },
 });

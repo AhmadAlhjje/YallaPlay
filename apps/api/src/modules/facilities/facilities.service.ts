@@ -8,6 +8,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { Facility, FacilityDocument } from '../../database/schemas/facility.mongoose-schema';
 import { Booking, BookingDocument } from '../../database/schemas/booking.mongoose-schema';
+import { Rating, RatingDocument } from '../../database/schemas/rating.mongoose-schema';
 import {
   CreateFacilityDtoType,
   UpdateFacilityDtoType,
@@ -21,6 +22,7 @@ export class FacilitiesService {
   constructor(
     @InjectModel(Facility.name) private facilityModel: Model<FacilityDocument>,
     @InjectModel(Booking.name) private bookingModel: Model<BookingDocument>,
+    @InjectModel(Rating.name) private ratingModel: Model<RatingDocument>,
   ) {}
 
   // ─── Owner CRUD ────────────────────────────────────────────────────────────
@@ -276,6 +278,47 @@ export class FacilitiesService {
   // Placeholder — implemented fully in OffersModule
   private async getActiveOffersForDate(_facilityId: string, _date: string): Promise<unknown[]> {
     return [];
+  }
+
+  // ─── Rating ────────────────────────────────────────────────────────────────
+
+  async rateFacility(facilityId: string, userId: string, value: number): Promise<{ rating: number; ratingCount: number }> {
+    if (!await this.facilityModel.exists({ _id: facilityId, isActive: true })) {
+      throw new NotFoundException('الملعب غير موجود.');
+    }
+    if (value < 1 || value > 5) {
+      throw new BadRequestException('التقييم يجب أن يكون بين 1 و 5.');
+    }
+
+    // Upsert: update if exists, create if not
+    await this.ratingModel.updateOne(
+      { userId: new Types.ObjectId(userId), facilityId: new Types.ObjectId(facilityId) },
+      { $set: { value } },
+      { upsert: true },
+    );
+
+    // Recalculate average from all ratings for this facility
+    const [agg] = await this.ratingModel.aggregate([
+      { $match: { facilityId: new Types.ObjectId(facilityId) } },
+      { $group: { _id: null, avg: { $avg: '$value' }, count: { $sum: 1 } } },
+    ]);
+
+    const newRating = agg ? Math.round(agg.avg * 10) / 10 : value;
+    const newCount  = agg?.count ?? 1;
+
+    await this.facilityModel.updateOne(
+      { _id: facilityId },
+      { $set: { rating: newRating, ratingCount: newCount } },
+    );
+
+    return { rating: newRating, ratingCount: newCount };
+  }
+
+  async getMyRating(facilityId: string, userId: string): Promise<number | null> {
+    const r = await this.ratingModel
+      .findOne({ facilityId: new Types.ObjectId(facilityId), userId: new Types.ObjectId(userId) })
+      .lean();
+    return r ? r.value : null;
   }
 
   async findOneAndAssertOwner(facilityId: string, ownerId: string): Promise<FacilityDocument> {

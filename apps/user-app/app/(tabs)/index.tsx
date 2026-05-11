@@ -14,9 +14,23 @@ import { FacilityCard } from '../../src/components/FacilityCard';
 import { SportChip } from '../../src/components/SportChip';
 import { useAuthStore } from '../../src/store/auth.store';
 import { useLocationStore } from '../../src/store/location.store';
-import { facilitiesApi } from '../../src/api/facilities.api';
+import { facilitiesApi, offersApi } from '../../src/api/facilities.api';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
 import { SportType } from '@yallaplay/shared-types';
+
+const DISTANCE_OPTIONS = [1, 3, 5, 10] as const;
+type DistanceKm = typeof DISTANCE_OPTIONS[number];
+
+const SPORT_LABELS_AR: Record<string, string> = {
+  football:   'كرة القدم',
+  basketball: 'كرة السلة',
+  tennis:     'تنس',
+  volleyball: 'كرة الطائرة',
+  padel:      'بادل',
+  squash:     'إسكواش',
+  badminton:  'ريشة طائر',
+  swimming:   'سباحة',
+};
 
 const SPORTS: SportType[] = ['football', 'basketball', 'tennis', 'volleyball', 'padel', 'squash'];
 const SPORTS_DATA: (SportType | 'all')[] = ['all', ...SPORTS];
@@ -46,9 +60,10 @@ const BANNERS = [
 
 export default function HomeScreen() {
   const { user }   = useAuthStore();
-  const { coords } = useLocationStore();
+  const { coords, requestLocation } = useLocationStore();
   const [selectedSport, setSelectedSport] = useState<SportType | undefined>();
   const [search, setSearch] = useState('');
+  const [nearbyRadius, setNearbyRadius] = useState<DistanceKm>(5);
   const bannerRef = useRef<FlatList>(null);
   const bannerIndex = useRef(0);
   const today = new Date().toISOString().split('T')[0];
@@ -88,18 +103,25 @@ export default function HomeScreen() {
   });
 
   const { data: nearbyData } = useQuery({
-    queryKey: ['facilities', 'nearby', coords],
+    queryKey: ['facilities', 'nearby', coords, nearbyRadius],
     queryFn: () => facilitiesApi.search({
-      sortBy: 'nearest', limit: 5,
+      sortBy: 'nearest', limit: 8,
       latitude: coords!.latitude, longitude: coords!.longitude,
+      radiusKm: nearbyRadius,
     }),
     enabled: !!coords,
     staleTime: 120_000,
   });
 
+  const { data: offersData } = useQuery({
+    queryKey: ['offers', 'active'],
+    queryFn: () => offersApi.getActive(8),
+    staleTime: 60_000,
+  });
+
   const { data: bookedTodayData } = useQuery({
-    queryKey: ['facilities', 'booked-today', today],
-    queryFn: () => facilitiesApi.search({ bookingsDate: today, sortBy: 'popular', limit: 6 }),
+    queryKey: ['facilities', 'booked-today', today, selectedSport],
+    queryFn: () => facilitiesApi.search({ bookingsDate: today, sport: selectedSport, sortBy: 'popular', limit: 6 }),
     staleTime: 60_000,
   });
 
@@ -108,12 +130,16 @@ export default function HomeScreen() {
   const featured    = featuredData?.data?.data?.facilities ?? [];
   const nearby      = nearbyData?.data?.data?.facilities ?? [];
   const bookedToday = bookedTodayData?.data?.data?.facilities ?? [];
+  const activeOffers = offersData?.data?.data ?? [];
 
   const handleFacilityPress = (id: string) => router.push(`/facility/${id}`);
   const handleSearch = () => {
     if (!search.trim()) return;
     router.push({ pathname: '/search', params: { query: search, sport: selectedSport } });
   };
+
+  // Request location on mount (silently — no popup if already granted)
+  useEffect(() => { requestLocation(); }, []);
 
   useEffect(() => {
     if (BANNERS.length === 0) return undefined;
@@ -229,28 +255,86 @@ export default function HomeScreen() {
             )}
           />
 
+          {/* ── Active Offers ─────────────────────────────────── */}
+          {activeOffers.length > 0 && (
+            <>
+              <View style={styles.sectionHeaderRow}>
+                <View style={styles.sectionTitleGroup}>
+                  <View style={[styles.sectionIconBubble, { backgroundColor: '#FEF3C7', borderColor: '#FDE68A' }]}>
+                    <Ionicons name="pricetag" size={14} color="#D97706" />
+                  </View>
+                  <Text style={[Typography.h3, { color: Colors.text.primary }]}>عروض اليوم</Text>
+                </View>
+                <View style={styles.offersBadge}>
+                  <Text style={styles.offersBadgeText}>{activeOffers.length} عرض</Text>
+                </View>
+              </View>
+              <FlatList
+                data={activeOffers}
+                horizontal
+                inverted
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(o) => o._id}
+                style={styles.listBreakout}
+                contentContainerStyle={styles.listContent}
+                ItemSeparatorComponent={CardSpacer}
+                renderItem={({ item }) => {
+                  const facility = item.facilityId;
+                  return (
+                    <TouchableOpacity
+                      onPress={() => handleFacilityPress(facility?._id ?? item.facilityId)}
+                      style={styles.offerCard}
+                      activeOpacity={0.85}
+                    >
+                      <View style={styles.offerDiscountBadge}>
+                        <Text style={styles.offerDiscountText}>-{item.discountPercent}%</Text>
+                      </View>
+                      <Text style={styles.offerFacilityName} numberOfLines={1}>{facility?.name ?? '—'}</Text>
+                      <Text style={styles.offerTime}>{item.date} · {item.startTime}</Text>
+                      <View style={styles.offerPriceRow}>
+                        <Text style={styles.offerNewPrice}>{item.discountedPrice} ر.س</Text>
+                        <Text style={styles.offerOldPrice}>{item.originalPrice} ر.س</Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }}
+              />
+            </>
+          )}
+
           {/* Popular */}
           <SectionHeader
             title={selectedSport ? `أفضل ملاعب ${selectedSport}` : 'الأكثر حجزاً'}
             onSeeAll={() => router.push({ pathname: '/search', params: { sport: selectedSport, sortBy: 'popular' } })}
           />
-          <FlatList
-            data={facilities}
-            horizontal
-            inverted
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(f) => f._id}
-            style={styles.listBreakout}
-            contentContainerStyle={styles.listContent}
-            ItemSeparatorComponent={CardSpacer}
-            renderItem={({ item }) => (
-              <FacilityCard
-                facility={item}
-                onPress={() => handleFacilityPress(item._id)}
-                style={styles.carouselCard}
-              />
-            )}
-          />
+          {facilities.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Ionicons name="search-outline" size={32} color={Colors.text.tertiary} />
+              <Text style={styles.emptyText}>
+                {selectedSport
+                  ? `لا يوجد ملاعب ${SPORT_LABELS_AR[selectedSport] ?? selectedSport} متاحة حالياً`
+                  : 'لا يوجد ملاعب'}
+              </Text>
+            </View>
+          ) : (
+            <FlatList
+              data={facilities}
+              horizontal
+              inverted
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(f) => f._id}
+              style={styles.listBreakout}
+              contentContainerStyle={styles.listContent}
+              ItemSeparatorComponent={CardSpacer}
+              renderItem={({ item }) => (
+                <FacilityCard
+                  facility={item}
+                  onPress={() => handleFacilityPress(item._id)}
+                  style={styles.carouselCard}
+                />
+              )}
+            />
+          )}
 
           {/* Top rated */}
           {topRated.length > 0 && (
@@ -306,31 +390,72 @@ export default function HomeScreen() {
             </>
           )}
 
-          {/* Nearby */}
-          {nearby.length > 0 && (
+          {/* Nearby — always visible */}
+          <View style={styles.sectionHeaderRow}>
+            <View style={styles.sectionTitleGroup}>
+              <View style={styles.sectionIconBubble}>
+                <Ionicons name="location-sharp" size={13} color={Colors.brand.primary} />
+              </View>
+              <Text style={[Typography.h3, { color: Colors.text.primary }]}>قريب منك</Text>
+            </View>
+            {coords && (
+              <TouchableOpacity
+                onPress={() => router.push({ pathname: '/search', params: { sortBy: 'nearest' } })}
+                style={styles.seeAllBtn}
+              >
+                <Text style={[Typography.labelMd, { color: Colors.brand.primary }]}>عرض الكل</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {!coords ? (
+            <TouchableOpacity style={styles.locationPrompt} onPress={requestLocation} activeOpacity={0.8}>
+              <Ionicons name="location-outline" size={28} color={Colors.brand.primary} />
+              <Text style={styles.locationPromptTitle}>فعّل الموقع لرؤية الملاعب القريبة</Text>
+              <Text style={styles.locationPromptSub}>اضغط هنا للسماح بالوصول إلى موقعك</Text>
+            </TouchableOpacity>
+          ) : (
             <>
-              <SectionHeader
-                title="قريب منك"
-                onSeeAll={() => router.push({ pathname: '/search', params: { sortBy: 'nearest' } })}
-              />
-              <FlatList
-                data={nearby}
-                horizontal
-                inverted
-                showsHorizontalScrollIndicator={false}
-                keyExtractor={(f) => f._id}
-                style={styles.listBreakout}
-                contentContainerStyle={styles.listContent}
-                ItemSeparatorComponent={CardSpacer}
-                renderItem={({ item }) => (
-                  <FacilityCard
-                    facility={item}
-                    variant="compact"
-                    onPress={() => handleFacilityPress(item._id)}
-                    style={styles.compactCard}
-                  />
-                )}
-              />
+              {/* Distance filter */}
+              <View style={styles.distanceRow}>
+                {DISTANCE_OPTIONS.map((km) => (
+                  <TouchableOpacity
+                    key={km}
+                    onPress={() => setNearbyRadius(km)}
+                    style={[styles.distanceChip, nearbyRadius === km && styles.distanceChipActive]}
+                  >
+                    <Text style={[styles.distanceChipText, nearbyRadius === km && styles.distanceChipTextActive]}>
+                      {km} كم
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              {nearby.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Ionicons name="location-outline" size={32} color={Colors.text.tertiary} />
+                  <Text style={styles.emptyText}>لا يوجد ملاعب ضمن {nearbyRadius} كم منك</Text>
+                </View>
+              ) : (
+                <FlatList
+                  data={nearby}
+                  horizontal
+                  inverted
+                  showsHorizontalScrollIndicator={false}
+                  keyExtractor={(f) => f._id}
+                  style={styles.listBreakout}
+                  contentContainerStyle={styles.listContent}
+                  ItemSeparatorComponent={CardSpacer}
+                  renderItem={({ item }) => (
+                    <FacilityCard
+                      facility={item}
+                      variant="compact"
+                      onPress={() => handleFacilityPress(item._id)}
+                      style={styles.compactCard}
+                    />
+                  )}
+                />
+              )}
             </>
           )}
 
@@ -343,7 +468,11 @@ export default function HomeScreen() {
                   <View style={styles.sectionIconBubble}>
                     <Ionicons name="calendar-outline" size={15} color={Colors.brand.primary} />
                   </View>
-                  <Text style={[Typography.h3, { color: Colors.text.primary }]}>الملاعب المتاحة اليوم</Text>
+                  <Text style={[Typography.h3, { color: Colors.text.primary }]}>
+                    {selectedSport
+                      ? `ملاعب ${SPORT_LABELS_AR[selectedSport] ?? selectedSport} اليوم`
+                      : 'الملاعب المتاحة اليوم'}
+                  </Text>
                 </View>
                 <TouchableOpacity
                   onPress={() => router.push('/(tabs)/bookings')}
@@ -526,4 +655,101 @@ const styles = StyleSheet.create({
   // Card sizes — narrower for portrait look
   carouselCard: { width: 195 },
   compactCard:  { width: 210 },
+
+  // Distance filter
+  distanceRow: {
+    flexDirection: 'row-reverse',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  distanceChip: {
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderRadius: Radius.full,
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+  },
+  distanceChipActive: {
+    backgroundColor: Colors.brand.primary,
+    borderColor: Colors.brand.primary,
+  },
+  distanceChipText: { fontSize: 12, fontWeight: '600', color: Colors.text.secondary },
+  distanceChipTextActive: { color: '#fff' },
+
+  // Offers
+  offersBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: Radius.full,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  offersBadgeText: { fontSize: 11, fontWeight: '700', color: '#D97706' },
+  offerCard: {
+    width: 160,
+    backgroundColor: Colors.background.elevated,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    padding: Spacing.md,
+    gap: Spacing.xs,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  offerDiscountBadge: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#FEF3C7',
+    borderRadius: Radius.sm,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    marginBottom: 4,
+  },
+  offerDiscountText: { fontSize: 12, fontWeight: '800', color: '#D97706' },
+  offerFacilityName: { fontSize: 13, fontWeight: '700', color: Colors.text.primary, textAlign: 'right' },
+  offerTime: { fontSize: 11, color: Colors.text.tertiary, textAlign: 'right' },
+  offerPriceRow: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6, marginTop: 4 },
+  offerNewPrice: { fontSize: 14, fontWeight: '800', color: Colors.brand.primary },
+  offerOldPrice: { fontSize: 11, color: Colors.text.tertiary, textDecorationLine: 'line-through' },
+
+  // Location prompt
+  locationPrompt: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.sm,
+    paddingVertical: Spacing.xl,
+    backgroundColor: Colors.brand.light,
+    borderRadius: Radius.xl,
+    borderWidth: 1.5,
+    borderColor: Colors.brand.border,
+    borderStyle: 'dashed',
+    marginBottom: Spacing.lg,
+  },
+  locationPromptTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.brand.primary,
+  },
+  locationPromptSub: {
+    fontSize: 12,
+    color: Colors.text.tertiary,
+  },
+
+  // Empty state
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Spacing.xl,
+    gap: Spacing.sm,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    marginBottom: Spacing.md,
+  },
+  emptyText: { fontSize: 13, color: Colors.text.tertiary, textAlign: 'center' },
 });

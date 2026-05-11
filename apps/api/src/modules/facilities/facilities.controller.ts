@@ -11,6 +11,8 @@ import {
   UsePipes,
   HttpCode,
   HttpStatus,
+  ParseIntPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { FacilitiesService } from './facilities.service';
@@ -53,6 +55,30 @@ export class FacilitiesController {
   @ApiQuery({ name: 'date', description: 'YYYY-MM-DD', required: true })
   getSlots(@Param('id') id: string, @Query('date') date: string) {
     return this.facilitiesService.getAvailableSlots(id, date);
+  }
+
+  @Post(':id/rate')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '[Athlete] Rate a facility (1-5 stars)' })
+  rate(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayloadType,
+    @Body('value') value: number,
+  ) {
+    const parsed = Number(value);
+    if (!parsed || parsed < 1 || parsed > 5) {
+      throw new BadRequestException('التقييم يجب أن يكون بين 1 و 5.');
+    }
+    return this.facilitiesService.rateFacility(id, user.sub, parsed);
+  }
+
+  @Get(':id/my-rating')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '[Athlete] Get my rating for a facility' })
+  getMyRating(@Param('id') id: string, @CurrentUser() user: JwtPayloadType) {
+    return this.facilitiesService.getMyRating(id, user.sub);
   }
 
   // ─── Owner-only endpoints ──────────────────────────────────────────────────

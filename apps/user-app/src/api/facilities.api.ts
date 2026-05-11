@@ -13,4 +13,15 @@ export const facilitiesApi = {
 
   getOffers: (facilityId: string, date: string) =>
     apiClient.get<{ data: any[] }>(`/offers/facility/${facilityId}`, { params: { date } }),
+
+  rate: (facilityId: string, value: number) =>
+    apiClient.post<{ data: { rating: number; ratingCount: number } }>(`/facilities/${facilityId}/rate`, { value }),
+
+  getMyRating: (facilityId: string) =>
+    apiClient.get<{ data: number | null }>(`/facilities/${facilityId}/my-rating`),
+};
+
+export const offersApi = {
+  getActive: (limit = 10) =>
+    apiClient.get<{ data: any[] }>('/offers/active', { params: { limit } }),
 };

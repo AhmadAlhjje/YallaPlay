@@ -9,7 +9,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MapSection } from '../../src/components/MapSection';
 import * as Haptics from 'expo-haptics';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { facilitiesApi } from '../../src/api/facilities.api';
 import { waitlistApi } from '../../src/api/waitlist.api';
 import { SlotButton } from '../../src/components/SlotButton';
@@ -76,7 +76,9 @@ export default function FacilityDetailScreen() {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [joiningWaitlist, setJoiningWaitlist] = useState(false);
+  const [pendingRating, setPendingRating] = useState(0);
   const galleryRef = useRef<FlatList<string>>(null);
+  const qc = useQueryClient();
 
   const { data: facilityRes, isLoading: facilityLoading } = useQuery({
     queryKey: ['facility', id],
@@ -89,6 +91,32 @@ export default function FacilityDetailScreen() {
     queryFn: () => facilitiesApi.getSlots(id, selectedDate),
     staleTime: 30_000,
   });
+
+  const { data: myRatingRes } = useQuery({
+    queryKey: ['my-rating', id],
+    queryFn: () => facilitiesApi.getMyRating(id),
+    staleTime: 300_000,
+  });
+
+  const myRating: number = myRatingRes?.data?.data ?? 0;
+
+  const { mutate: submitRating, isPending: ratingLoading } = useMutation({
+    mutationFn: (value: number) => facilitiesApi.rate(id, value),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      qc.invalidateQueries({ queryKey: ['facility', id] });
+      qc.invalidateQueries({ queryKey: ['my-rating', id] });
+    },
+    onError: () => {
+      Alert.alert('خطأ', 'تعذّر إرسال التقييم. حاول مرة أخرى.');
+      setPendingRating(0);
+    },
+  });
+
+  const handleRate = (value: number) => {
+    setPendingRating(value);
+    submitRating(value);
+  };
 
   const facility = facilityRes?.data?.data;
   const slots: SlotDtoType[] = slotsRes?.data?.data ?? [];
@@ -279,6 +307,38 @@ export default function FacilityDetailScreen() {
               <Text style={styles.statValue}>{facility.totalBookings ?? 0}</Text>
               <Text style={styles.statLabel}>إجمالي الحجوزات</Text>
             </View>
+          </View>
+
+          {/* User Rating */}
+          <View style={styles.ratingSection}>
+            <Text style={styles.ratingSectionTitle}>
+              {myRating > 0 ? 'تقييمك للملعب' : 'قيّم هذا الملعب'}
+            </Text>
+            <View style={styles.starsInteractive}>
+              {[1, 2, 3, 4, 5].map((star) => {
+                const active = star <= (pendingRating || myRating);
+                return (
+                  <TouchableOpacity
+                    key={star}
+                    onPress={() => handleRate(star)}
+                    disabled={ratingLoading}
+                    activeOpacity={0.7}
+                    hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+                  >
+                    <Ionicons
+                      name={active ? 'star' : 'star-outline'}
+                      size={32}
+                      color={active ? '#F59E0B' : Colors.border.strong}
+                    />
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {facility.ratingCount > 0 && (
+              <Text style={styles.ratingCountText}>
+                {facility.rating?.toFixed(1)} من 5 · {facility.ratingCount} تقييم
+              </Text>
+            )}
           </View>
 
           {/* Description */}
@@ -665,4 +725,29 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.25)',
   },
   galleryCounterText: { color: '#fff', fontSize: 12 },
+
+  ratingSection: {
+    alignItems: 'center',
+    paddingVertical: Spacing.lg,
+    marginVertical: Spacing.md,
+    backgroundColor: Colors.background.secondary,
+    borderRadius: Radius.xl,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    gap: Spacing.sm,
+  },
+  ratingSectionTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.text.secondary,
+  },
+  starsInteractive: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  ratingCountText: {
+    fontSize: 12,
+    color: Colors.text.tertiary,
+    marginTop: 2,
+  },
 });

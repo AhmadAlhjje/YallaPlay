@@ -66,6 +66,9 @@ export class Facility {
 
   @Prop({ type: Number, default: 0, min: 0, max: 5 })
   rating: number;
+
+  @Prop({ type: Number, default: 0, min: 0 })
+  ratingCount: number;
 }
 
 export const FacilitySchema = SchemaFactory.createForClass(Facility);
