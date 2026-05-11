@@ -12,6 +12,7 @@ import { facilitiesApi } from '../src/api/facilities.api';
 import { GlassCard } from '../src/components/GlassCard';
 import { PrimaryButton } from '../src/components/PrimaryButton';
 import { Colors, Typography, Spacing, Radius } from '../src/theme';
+import { formatTime12h } from '../src/lib/time';
 
 function buildDateList(days = 14) {
   const list: { date: string; label: string; dayLabel: string }[] = [];
@@ -247,7 +248,7 @@ export default function OffersScreen() {
                         style={[styles.chip, startTime === s.startTime && styles.chipActive]}
                       >
                         <Text style={[Typography.labelMd, { color: startTime === s.startTime ? Colors.warning : Colors.text.secondary }]}>
-                          🕐 {s.startTime}
+                          🕐 {formatTime12h(s.startTime)}
                         </Text>
                       </TouchableOpacity>
                     ))}
@@ -310,7 +311,7 @@ function OfferCard({ offer, onDeactivate }: { offer: any; onDeactivate: () => vo
           📅 {offer.date}
         </Text>
         <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>
-          🕐 {offer.startTime}
+          🕐 {formatTime12h(offer.startTime)}
         </Text>
       </View>
       <TouchableOpacity onPress={onDeactivate} style={styles.deactivateBtn}>

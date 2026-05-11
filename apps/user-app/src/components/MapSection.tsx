@@ -38,7 +38,7 @@ export function MapSection({ latitude, longitude, title }: MapSectionProps) {
       {/* Open in maps button */}
       <TouchableOpacity style={styles.openBtn} onPress={openInMaps} activeOpacity={0.85}>
         <View style={styles.openBtnIcon}>
-          <Ionicons name="location-sharp" size={14} color="#fff" />
+          <Ionicons name="location-sharp" size={14} color={Colors.brand.primary} />
         </View>
         <Text style={styles.openBtnText}>فتح في الخريطة</Text>
         <Ionicons name="chevron-back" size={14} color={Colors.brand.primary} />
@@ -73,9 +73,13 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border.default,
   },
   openBtnIcon: {
-    width: 24, height: 24, borderRadius: 6,
-    backgroundColor: Colors.brand.primary,
+    width: 26, height: 26, borderRadius: 7,
+    backgroundColor: Colors.brand.light,
+    borderWidth: 1, borderColor: Colors.brand.border,
     alignItems: 'center', justifyContent: 'center',
+    shadowColor: Colors.brand.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15, shadowRadius: 4, elevation: 2,
   },
   openBtnText: {
     flex: 1,

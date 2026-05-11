@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { waitlistApi } from '../../src/api/waitlist.api';
 import { GlassCard } from '../../src/components/GlassCard';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
+import { formatTime12h } from '../../src/lib/time';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string }> = {
   waiting:   { label: 'في الانتظار', color: Colors.warning },
@@ -123,7 +124,7 @@ function WaitlistCard({
 
       <View style={[styles.cardRow, { marginTop: Spacing.sm }]}>
         <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>📅 {entry.date}</Text>
-        <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>🕐 {entry.startTime}</Text>
+        <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>🕐 {formatTime12h(entry.startTime)}</Text>
       </View>
 
       {entry.position > 0 && entry.status === 'waiting' && (

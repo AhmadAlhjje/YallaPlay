@@ -14,6 +14,7 @@ import { facilitiesApi } from '../../src/api/facilities.api';
 import { waitlistApi } from '../../src/api/waitlist.api';
 import { SlotButton } from '../../src/components/SlotButton';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
+import { formatTimeRange } from '../../src/lib/time';
 import { GlassCard } from '../../src/components/GlassCard';
 import type { SlotDtoType } from '@yallaplay/shared-types';
 
@@ -92,11 +93,16 @@ export default function FacilityDetailScreen() {
   const facility = facilityRes?.data?.data;
   const slots: SlotDtoType[] = slotsRes?.data?.data ?? [];
 
-  const primarySport = (facility?.sports ?? [])[0] ?? 'football';
-  const images: any[] = SPORT_IMAGES[primarySport] ?? FALLBACK_IMAGES;
+  const primarySport = (facility?.sports ?? [])[0];
+  const imageSport = primarySport ?? 'football';
+  const images: any[] = SPORT_IMAGES[imageSport] ?? FALLBACK_IMAGES;
 
   const handleBookNow = () => {
     if (!selectedSlot) return;
+    if (!primarySport) {
+      Alert.alert('خطأ', 'لم يتم تحديد الرياضة لهذا الملعب بعد.');
+      return;
+    }
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
       pathname: '/booking/new',
@@ -375,7 +381,7 @@ export default function FacilityDetailScreen() {
           <View style={styles.bottomContent}>
             <View>
               <Text style={[Typography.labelMd, { color: Colors.text.secondary }]}>
-                {selectedSlot.startTime} – {selectedSlot.endTime}
+                {formatTimeRange(selectedSlot.startTime, selectedSlot.endTime)}
               </Text>
               <Text style={[Typography.h3, { color: Colors.text.primary }]}>
                 {selectedSlot.discountedPrice ?? selectedSlot.price} ر.س

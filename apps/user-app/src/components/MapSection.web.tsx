@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Linking } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius } from '../theme';
 
 interface MapSectionProps {
@@ -17,7 +18,9 @@ export function MapSection({ latitude, longitude, title }: MapSectionProps) {
     <View style={styles.container}>
       {/* Web: static map image via Google Maps Static API (no key needed for basic embed) */}
       <View style={styles.mapPlaceholder}>
-        <Text style={{ fontSize: 36 }}>📍</Text>
+        <View style={styles.pinBadge}>
+          <Ionicons name="location-sharp" size={14} color={Colors.brand.primary} />
+        </View>
         <Text style={[Typography.labelMd, { color: Colors.text.secondary, marginTop: Spacing.sm, textAlign: 'center' }]}>
           {title}
         </Text>
@@ -46,6 +49,15 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background.elevated,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  pinBadge: {
+    width: 26, height: 26, borderRadius: 7,
+    backgroundColor: Colors.brand.light,
+    borderWidth: 1, borderColor: Colors.brand.border,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: Colors.brand.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15, shadowRadius: 4, elevation: 2,
   },
   overlay: {
     backgroundColor: Colors.background.primary + 'CC',

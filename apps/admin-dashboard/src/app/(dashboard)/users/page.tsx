@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminApi, plansApi } from '@/lib/api';
 import { GlassCard } from '@/components/ui/GlassCard';
-import { formatDate, formatCurrency, cn } from '@/lib/utils';
+import { formatDate, formatCurrency, formatTime12h, cn } from '@/lib/utils';
 
 type ConfirmAction = { id: string; name: string; action: 'suspend' | 'reactivate' } | null;
 
@@ -361,7 +361,7 @@ export default function UsersPage() {
                     <div key={b._id} className="flex justify-between items-center px-4 py-2.5">
                       <div>
                         <p className="text-sm text-[--text-primary]">{b.facility?.name ?? '—'}</p>
-                        <p className="text-xs text-[--text-tertiary]">{b.date} · {b.startTime}</p>
+                        <p className="text-xs text-[--text-tertiary]">{b.date} · {formatTime12h(b.startTime)}</p>
                       </div>
                       <span className={cn(
                         'text-xs font-medium',

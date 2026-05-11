@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '@/lib/api';
 import { GlassCard } from '@/components/ui/GlassCard';
-import { formatDate, formatCurrency, cn } from '@/lib/utils';
+import { formatDate, formatCurrency, formatTimeRange, cn } from '@/lib/utils';
+import { MapPin } from 'lucide-react';
 
 const STATUS_CONFIG: Record<string, { label: string; cls: string }> = {
   pending:   { label: 'معلّق',   cls: 'badge-warning' },
@@ -196,11 +197,14 @@ export default function BookingsPage() {
                       </td>
                       <td>
                         <p className="text-sm text-[--text-primary]">{b.facility?.name ?? '—'}</p>
-                        <p className="text-xs text-[--text-tertiary]">📍 {b.facility?.address ?? ''}</p>
+                        <p className="text-xs text-[--text-tertiary] flex items-center gap-1">
+                          <MapPin size={14} className="text-brand-primary" />
+                          <span>{b.facility?.address ?? ''}</span>
+                        </p>
                       </td>
                       <td>
                         <p className="text-sm tabular-nums">{b.date}</p>
-                        <p className="text-xs text-[--text-tertiary]">{b.startTime} – {b.endTime}</p>
+                        <p className="text-xs text-[--text-tertiary]">{formatTimeRange(b.startTime, b.endTime)}</p>
                       </td>
                       <td>
                         <span className="tabular-nums text-sm font-semibold text-emerald-400">
@@ -271,7 +275,7 @@ export default function BookingsPage() {
 
               <BookingDetailSection title="معلومات الحجز">
                 <BookingDetailRow label="التاريخ" value={detailBooking.date ?? '—'} />
-                <BookingDetailRow label="الوقت" value={`${detailBooking.startTime} – ${detailBooking.endTime}`} />
+                <BookingDetailRow label="الوقت" value={formatTimeRange(detailBooking.startTime, detailBooking.endTime)} />
                 <BookingDetailRow label="المبلغ" value={formatCurrency(detailBooking.totalPrice ?? 0, 'SYP')} />
                 <BookingDetailRow label="طريقة الدفع" value={PAYMENT_LABELS[detailBooking.paymentMethod] ?? detailBooking.paymentMethod ?? '—'} />
                 {detailBooking.pointsUsed > 0 && (

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { adminApi } from '@/lib/api';
 import { GlassCard } from '@/components/ui/GlassCard';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
+import { MapPin } from 'lucide-react';
 
 const SPORT_LABELS: Record<string, string> = {
   football: '⚽ كرة القدم', basketball: '🏀 كرة السلة', tennis: '🎾 تنس',
@@ -147,7 +148,10 @@ export default function FacilitiesPage() {
                     <td>
                       <button onClick={() => openDetail(f._id)} className="text-right hover:text-brand-primary transition-colors">
                         <p className="text-sm font-medium text-[--text-primary]">{f.name}</p>
-                        <p className="text-xs text-[--text-tertiary]">📍 {f.address}</p>
+                        <p className="text-xs text-[--text-tertiary] flex items-center gap-1">
+                          <MapPin size={14} className="text-brand-primary" />
+                          <span>{f.address}</span>
+                        </p>
                       </button>
                     </td>
                     <td>

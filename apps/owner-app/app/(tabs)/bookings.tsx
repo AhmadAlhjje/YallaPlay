@@ -10,6 +10,7 @@ import { bookingsApi } from '../../src/api/bookings.api';
 import { facilitiesApi } from '../../src/api/facilities.api';
 import { GlassCard } from '../../src/components/GlassCard';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
+import { formatTimeRange } from '../../src/lib/time';
 
 const STATUS_FILTERS = [
   { key: undefined,    label: 'الكل',    color: Colors.text.secondary },
@@ -222,7 +223,7 @@ function BookingCard({
       {/* Date, time, price */}
       <View style={[styles.cardRow, styles.infoRow]}>
         <InfoChip icon="📅" value={booking.date} />
-        <InfoChip icon="🕐" value={`${booking.startTime} – ${booking.endTime}`} />
+        <InfoChip icon="🕐" value={formatTimeRange(booking.startTime, booking.endTime)} />
         <InfoChip icon="💰" value={`${booking.price} ل.س`} highlight />
       </View>
 

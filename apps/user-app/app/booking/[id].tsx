@@ -6,11 +6,13 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import QRCode from 'react-native-qrcode-svg';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingsApi } from '../../src/api/bookings.api';
 import { GlassCard } from '../../src/components/GlassCard';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
+import { formatTimeRange } from '../../src/lib/time';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
   pending:   { label: 'معلّق',    color: Colors.warning,       bg: Colors.warningBg,  icon: '⏳' },
@@ -74,7 +76,7 @@ export default function BookingDetailScreen() {
 
   const handleShareWhatsapp = () => {
     shareMutation.mutate();
-    const text = `حجزت ملعب ${booking.facility?.name} بتاريخ ${booking.date} الساعة ${booking.startTime} - ${booking.endTime} 🏟️`;
+    const text = `حجزت ملعب ${booking.facility?.name} بتاريخ ${booking.date} الساعة ${formatTimeRange(booking.startTime, booking.endTime)} 🏟️`;
     const url = `whatsapp://send?text=${encodeURIComponent(text)}`;
     Linking.openURL(url).catch(() => Alert.alert('تنبيه', 'تطبيق واتساب غير مثبّت'));
   };
@@ -124,7 +126,7 @@ export default function BookingDetailScreen() {
               {booking.facility?.name ?? '—'}
             </Text>
             <DetailRow icon="📅" label="التاريخ" value={booking.date} />
-            <DetailRow icon="🕐" label="الوقت" value={`${booking.startTime} – ${booking.endTime}`} />
+            <DetailRow icon="🕐" label="الوقت" value={formatTimeRange(booking.startTime, booking.endTime)} />
             {booking.sport && <DetailRow icon="🏟️" label="الرياضة" value={booking.sport} />}
             <DetailRow icon="💵" label="طريقة الدفع" value={paymentLabel(booking.paymentMethod)} />
             <View style={styles.divider} />
@@ -137,7 +139,9 @@ export default function BookingDetailScreen() {
           {/* Facility Address */}
           {booking.facility?.address && (
             <GlassCard style={[styles.detailCard, { flexDirection: 'row', alignItems: 'center', gap: Spacing.md }]}>
-              <Text style={{ fontSize: 24 }}>📍</Text>
+              <View style={styles.locationIcon}>
+                <Ionicons name="location-sharp" size={14} color={Colors.brand.primary} />
+              </View>
               <View style={{ flex: 1 }}>
                 <Text style={[Typography.labelMd, { color: Colors.text.secondary }]}>العنوان</Text>
                 <Text style={[Typography.bodyMd, { color: Colors.text.primary, marginTop: 2 }]}>
@@ -244,6 +248,15 @@ const styles = StyleSheet.create({
     borderWidth: 1, borderColor: Colors.border.default,
   },
   detailCard: { padding: Spacing.xl, marginBottom: Spacing.md },
+  locationIcon: {
+    width: 26, height: 26, borderRadius: 7,
+    backgroundColor: Colors.brand.light,
+    borderWidth: 1, borderColor: Colors.brand.border,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: Colors.brand.primary,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15, shadowRadius: 4, elevation: 2,
+  },
   divider: { height: 1, backgroundColor: Colors.border.default, marginVertical: Spacing.md },
   actions: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.md },
   whatsappBtn: {

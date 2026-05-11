@@ -2,6 +2,7 @@ import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ViewStyle, StyleProp } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Colors, Typography, Radius } from '../theme';
+import { formatTime12h } from '../lib/time';
 import type { SlotDtoType } from '@yallaplay/shared-types';
 
 interface SlotButtonProps {
@@ -37,7 +38,7 @@ export function SlotButton({ slot, selected = false, onPress, style }: SlotButto
       ]}
     >
       <Text style={[styles.time, selected && styles.timeSelected, disabled && styles.dimmed]}>
-        {slot.startTime}
+        {formatTime12h(slot.startTime)}
       </Text>
       <Text style={[styles.sub, selected && styles.subSelected, disabled && styles.dimmed]}>
         {isBooked ? 'محجوز' : isPending ? 'معلّق' : isClosed ? 'مغلق' : `${slot.price} ر.س`}

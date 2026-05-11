@@ -8,6 +8,7 @@ import { useQuery } from '@tanstack/react-query';
 import { bookingsApi } from '../../src/api/bookings.api';
 import { GlassCard } from '../../src/components/GlassCard';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
+import { formatTimeRange } from '../../src/lib/time';
 
 type Filter = 'upcoming' | 'past';
 
@@ -104,7 +105,7 @@ function BookingCard({ booking, onPress }: { booking: any; onPress: () => void }
         <View style={[styles.cardRow, { marginTop: Spacing.sm }]}>
           <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>📅 {booking.date}</Text>
           <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>
-            🕐 {booking.startTime} – {booking.endTime}
+            🕐 {formatTimeRange(booking.startTime, booking.endTime)}
           </Text>
         </View>
 

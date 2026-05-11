@@ -5,6 +5,7 @@ import {
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import { analyticsApi } from '../../src/api/analytics.api';
 import { facilitiesApi } from '../../src/api/facilities.api';
 import { bookingsApi } from '../../src/api/bookings.api';
@@ -210,9 +211,12 @@ export default function DashboardTab() {
                       <Text style={[Typography.labelLg, { color: Colors.text.primary }]} numberOfLines={1}>
                         {f.name}
                       </Text>
-                      <Text style={[Typography.bodySm, { color: Colors.text.tertiary }]} numberOfLines={1}>
-                        📍 {f.address}
-                      </Text>
+                      <View style={styles.addressRow}>
+                        <Ionicons name="location-sharp" size={14} color={Colors.brand.primary} />
+                        <Text style={[Typography.bodySm, { color: Colors.text.tertiary }]} numberOfLines={1}>
+                          {f.address}
+                        </Text>
+                      </View>
                     </View>
                     <View style={{ alignItems: 'flex-end', gap: 4 }}>
                       <View style={[styles.statusDot, { backgroundColor: f.isActive ? Colors.success : Colors.error }]} />
@@ -327,6 +331,11 @@ const styles = StyleSheet.create({
   facilityRow: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
     padding: Spacing.md,
+  },
+  addressRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
   },
   facilityIconBox: {
     width: 50, height: 50, borderRadius: Radius.md,

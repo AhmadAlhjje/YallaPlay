@@ -1,6 +1,6 @@
 import { adminApi } from '@/lib/api';
 import { GlassCard } from '@/components/ui/GlassCard';
-import { formatRelative } from '@/lib/utils';
+import { formatRelative, formatTime12h } from '@/lib/utils';
 
 const STATUS_BADGE: Record<string, string> = {
   pending:   'badge-warning',
@@ -50,7 +50,7 @@ export async function RecentBookings() {
                   {b.user?.name ?? '—'}
                 </p>
                 <p className="text-xs text-[--text-tertiary] truncate">
-                  {b.facility?.name ?? '—'} · {b.date} · {b.startTime}
+                  {b.facility?.name ?? '—'} · {b.date} · {formatTime12h(b.startTime)}
                 </p>
               </div>
               <div className="flex flex-col items-end gap-1 flex-shrink-0">

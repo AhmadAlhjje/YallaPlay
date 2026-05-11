@@ -9,6 +9,7 @@ import * as Haptics from 'expo-haptics';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { bookingsApi } from '../../src/api/bookings.api';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
+import { formatTimeRange } from '../../src/lib/time';
 
 type ScanState = 'idle' | 'loading' | 'success' | 'error';
 
@@ -113,7 +114,7 @@ export default function ScannerTab() {
               <BookingRow icon="👤" label="اللاعب"  value={confirmedBooking.user?.name ?? '—'} />
               <BookingRow icon="📱" label="الجوال"  value={confirmedBooking.user?.phone ?? '—'} />
               <BookingRow icon="📅" label="التاريخ" value={confirmedBooking.date ?? '—'} />
-              <BookingRow icon="🕐" label="الوقت"   value={`${confirmedBooking.startTime ?? ''} – ${confirmedBooking.endTime ?? ''}`} />
+              <BookingRow icon="🕐" label="الوقت"   value={formatTimeRange(confirmedBooking.startTime ?? '', confirmedBooking.endTime ?? '')} />
               <BookingRow icon="💰" label="المبلغ"  value={`${confirmedBooking.price ?? 0} ل.س`} last />
             </View>
 

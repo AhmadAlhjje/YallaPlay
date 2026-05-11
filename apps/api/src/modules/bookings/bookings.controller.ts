@@ -7,7 +7,6 @@ import {
   Param,
   Query,
   UseGuards,
-  UsePipes,
   HttpCode,
   HttpStatus,
   Patch,
@@ -39,8 +38,7 @@ export class BookingsController {
   @Post()
   @Roles('athlete')
   @ApiOperation({ summary: '[Athlete] Create a booking (atomic slot lock)' })
-  @UsePipes(new ZodValidationPipe(CreateBookingDto))
-  create(@CurrentUser() user: JwtPayloadType, @Body() dto: CreateBookingDtoType) {
+  create(@CurrentUser() user: JwtPayloadType, @Body(new ZodValidationPipe(CreateBookingDto)) dto: CreateBookingDtoType) {
     return this.bookingsService.createBooking(user.sub, dto);
   }
 
@@ -52,11 +50,10 @@ export class BookingsController {
 
   @Delete(':id')
   @ApiOperation({ summary: 'Cancel a booking (athlete cancels own / owner cancels theirs)' })
-  @UsePipes(new ZodValidationPipe(CancelBookingDto))
   cancel(
     @Param('id') id: string,
     @CurrentUser() user: JwtPayloadType,
-    @Body() dto: CancelBookingDtoType,
+    @Body(new ZodValidationPipe(CancelBookingDto)) dto: CancelBookingDtoType,
   ) {
     return this.bookingsService.cancelBooking(id, user.sub, user.role, dto);
   }

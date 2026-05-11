@@ -7,8 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { InjectConnection } from '@nestjs/mongoose';
-import { Model, Connection, Types } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bull';
@@ -30,7 +29,6 @@ export class BookingsService {
     @InjectModel(Booking.name) private bookingModel: Model<BookingDocument>,
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     @InjectModel(Facility.name) private facilityModel: Model<FacilityDocument>,
-    @InjectConnection() private connection: Connection,
     private jwtService: JwtService,
     private config: ConfigService,
     private facilitiesService: FacilitiesService,
@@ -80,43 +78,29 @@ export class BookingsService {
 
     // 7. ATOMIC INSERT — MongoDB unique index fires here if slot is taken
     // Two simultaneous requests: only ONE succeeds. The other gets E11000 → 409.
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
     let booking: BookingDocument;
     try {
-      const [created] = await this.bookingModel.create(
-        [
-          {
-            facilityId: new Types.ObjectId(dto.facilityId),
-            userId: new Types.ObjectId(userId),
-            sport: dto.sport,
-            date: dto.date,
-            startTime: dto.startTime,
-            endTime,
-            status: 'pending_payment',
-            paymentMethod: dto.paymentMethod,
-            paymentStatus: 'unpaid',
-            totalPrice: price.final,
-            discountApplied: price.discount,
-            pointsEarned: 0,
-            expiresAt: new Date(Date.now() + PENDING_PAYMENT_TTL_MS),
-          },
-        ],
-        { session },
-      );
-
-      await session.commitTransaction();
-      booking = created;
+      booking = await this.bookingModel.create({
+        facilityId: new Types.ObjectId(dto.facilityId),
+        userId: new Types.ObjectId(userId),
+        sport: dto.sport,
+        date: dto.date,
+        startTime: dto.startTime,
+        endTime,
+        status: 'pending_payment',
+        paymentMethod: dto.paymentMethod,
+        paymentStatus: 'unpaid',
+        totalPrice: price.final,
+        discountApplied: price.discount,
+        pointsEarned: 0,
+        expiresAt: new Date(Date.now() + PENDING_PAYMENT_TTL_MS),
+      });
     } catch (error: any) {
-      await session.abortTransaction();
       // E11000 = MongoDB duplicate key — slot was taken between check and insert
       if (error?.code === 11000) {
         throw new ConflictException('هذا الوقت محجوز. اختر وقتاً آخر.');
       }
       throw error;
-    } finally {
-      session.endSession();
     }
 
     // 8. Generate QR token (signed JWT, 15 min expiry)
@@ -250,37 +234,23 @@ export class BookingsService {
       throw new BadRequestException('لا يمكن إلغاء هذا الحجز.');
     }
 
-    const session = await this.connection.startSession();
-    session.startTransaction();
-
-    try {
-      await this.bookingModel.updateOne(
-        { _id: bookingId },
-        {
-          $set: {
-            status: 'cancelled',
-            cancelledAt: new Date(),
-            cancellationReason: dto.reason,
-          },
+    await this.bookingModel.updateOne(
+      { _id: bookingId },
+      {
+        $set: {
+          status: 'cancelled',
+          cancelledAt: new Date(),
+          cancellationReason: dto.reason,
         },
-        { session },
+      },
+    );
+
+    // Revoke points if they were granted
+    if (booking.pointsEarned > 0) {
+      await this.userModel.updateOne(
+        { _id: booking.userId },
+        { $inc: { points: -booking.pointsEarned } },
       );
-
-      // Revoke points if they were granted
-      if (booking.pointsEarned > 0) {
-        await this.userModel.updateOne(
-          { _id: booking.userId },
-          { $inc: { points: -booking.pointsEarned } },
-          { session },
-        );
-      }
-
-      await session.commitTransaction();
-    } catch (error) {
-      await session.abortTransaction();
-      throw error;
-    } finally {
-      session.endSession();
     }
 
     // Notify the other party

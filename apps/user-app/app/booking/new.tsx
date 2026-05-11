@@ -13,6 +13,7 @@ import { bookingsApi } from '../../src/api/bookings.api';
 import { GlassCard } from '../../src/components/GlassCard';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
+import { formatTimeRange } from '../../src/lib/time';
 
 type Step = 1 | 2;
 
@@ -113,7 +114,7 @@ export default function NewBookingScreen() {
   const handleShareWhatsapp = async () => {
     if (!bookingId) return;
     try { await bookingsApi.markSharedWhatsapp(bookingId); } catch { /* ignore */ }
-    const text = `حجزت ملعب ${facilityName} بتاريخ ${date} الساعة ${startTime} - ${endTime} 🏟️`;
+    const text = `حجزت ملعب ${facilityName} بتاريخ ${date} الساعة ${formatTimeRange(startTime, endTime)} 🏟️`;
     Linking.openURL(`whatsapp://send?text=${encodeURIComponent(text)}`).catch(() =>
       Alert.alert('تنبيه', 'تطبيق واتساب غير مثبّت'),
     );
@@ -150,7 +151,7 @@ export default function NewBookingScreen() {
                   <Text style={styles.facilityName}>{facilityName}</Text>
 
                   <InfoRow icon="calendar-outline" label="التاريخ"  value={date} />
-                  <InfoRow icon="time-outline"     label="الوقت"    value={`${startTime} – ${endTime}`} />
+                  <InfoRow icon="time-outline"     label="الوقت"    value={formatTimeRange(startTime, endTime)} />
                   <InfoRow icon="hourglass-outline" label="المدة"   value={calcDuration(startTime, endTime)} />
                   {sport && <InfoRow icon="football-outline" label="الرياضة" value={sport} />}
 
@@ -212,7 +213,7 @@ export default function NewBookingScreen() {
                 <GlassCard style={styles.infoCard}>
                   <InfoRow icon="business-outline"  label="الملعب"  value={facilityName} />
                   <InfoRow icon="calendar-outline"  label="التاريخ" value={date} />
-                  <InfoRow icon="time-outline"      label="الوقت"   value={`${startTime} – ${endTime}`} />
+                  <InfoRow icon="time-outline"      label="الوقت"   value={formatTimeRange(startTime, endTime)} />
                   <View style={[styles.divider, { marginVertical: Spacing.sm }]} />
                   <View style={styles.priceRow}>
                     <Text style={styles.priceLabel}>المبلغ المطلوب</Text>

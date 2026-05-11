@@ -5,6 +5,7 @@ import {
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { facilitiesApi } from '../../src/api/facilities.api';
 import { GlassCard } from '../../src/components/GlassCard';
@@ -120,9 +121,12 @@ function FacilityCard({
       </View>
 
       <Text style={[Typography.h3, { color: Colors.text.primary, marginBottom: 4 }]}>{facility.name}</Text>
-      <Text style={[Typography.bodyMd, { color: Colors.text.secondary, marginBottom: Spacing.md }]} numberOfLines={1}>
-        📍 {facility.address}
-      </Text>
+      <View style={styles.addressRow}>
+        <Ionicons name="location-sharp" size={14} color={Colors.brand.primary} />
+        <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]} numberOfLines={1}>
+          {facility.address}
+        </Text>
+      </View>
 
       {/* Sports */}
       <View style={styles.sportsRow}>
@@ -188,6 +192,12 @@ const styles = StyleSheet.create({
   cardTop: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     marginBottom: Spacing.sm,
+  },
+  addressRow: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: Spacing.md,
   },
   statusBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
