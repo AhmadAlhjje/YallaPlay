@@ -34,7 +34,7 @@ export default function RegisterScreen() {
   const [skillLevel, setSkill]    = useState<string>('beginner');
   const [sports, setSports]       = useState<string[]>([]);
   const [loading, setLoading]     = useState(false);
-  const { register } = useAuthStore();
+  const { register, sendOtp } = useAuthStore();
 
   const isPhoneValid = /^\+963\d{9}$/.test(phone);
   const canSubmit    = name.trim().length >= 2 && isPhoneValid && password.length >= 6;
@@ -49,8 +49,13 @@ export default function RegisterScreen() {
     if (!canSubmit) return;
     setLoading(true);
     try {
-      await register(name.trim(), phone, password, skillLevel, sports);
-      router.replace('/(tabs)');
+      const { requiresOtp } = await register(name.trim(), phone, password, skillLevel, sports);
+      if (requiresOtp) {
+        await sendOtp(phone);
+        router.replace({ pathname: '/(auth)/otp', params: { phone } });
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 409) {

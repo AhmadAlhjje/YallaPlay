@@ -68,6 +68,16 @@ export class BookingsController {
     return this.bookingsService.markSharedViaWhatsapp(id, user.sub);
   }
 
+  @Patch(':id/payment-submitted')
+  @ApiOperation({ summary: '[Athlete] Mark payment submitted (with optional screenshot) and notify owner' })
+  markPaymentSubmitted(
+    @Param('id') id: string,
+    @CurrentUser() user: JwtPayloadType,
+    @Body('screenshot') screenshot?: string,
+  ) {
+    return this.bookingsService.markPaymentSubmitted(id, user.sub, screenshot);
+  }
+
   // ─── Owner endpoints ───────────────────────────────────────────────────────
 
   @Post('confirm-qr')
@@ -76,6 +86,14 @@ export class BookingsController {
   @ApiOperation({ summary: '[Owner] Confirm payment by validating QR token' })
   confirmByQr(@CurrentUser() user: JwtPayloadType, @Body('qrToken') qrToken: string) {
     return this.bookingsService.confirmBooking(qrToken, user.sub);
+  }
+
+  @Patch(':id/confirm-manual')
+  @UseGuards(RolesGuard)
+  @Roles('owner')
+  @ApiOperation({ summary: '[Owner] Manually confirm a pending booking' })
+  confirmManual(@Param('id') id: string, @CurrentUser() user: JwtPayloadType) {
+    return this.bookingsService.confirmBookingManual(id, user.sub);
   }
 
   @Get('facility/:facilityId')

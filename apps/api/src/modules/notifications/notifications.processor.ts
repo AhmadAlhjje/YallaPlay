@@ -60,6 +60,18 @@ export class NotificationsProcessor {
     });
   }
 
+  @Process('payment_submitted')
+  async onPaymentSubmitted(job: Job) {
+    const { ownerId, facilityName, date, startTime, userName } = job.data;
+    await this.notificationsService.sendPush({
+      userId: ownerId,
+      type: 'payment_submitted',
+      title: '💳 تم إرسال الدفع',
+      body: `تم إرسال دفع لحجز ${userName} في ${facilityName} بتاريخ ${date} الساعة ${startTime}.`,
+      data: { bookingId: job.data.bookingId, screen: 'OwnerBookings' },
+    });
+  }
+
   @Process('waitlist_slot_available')
   async onWaitlistSlotAvailable(job: Job) {
     const { userId, facilityId, date, startTime, claimWindowMinutes } = job.data;

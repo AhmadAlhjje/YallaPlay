@@ -19,4 +19,13 @@ export const usersApi = {
 
   addDeviceToken: (token: string) =>
     apiClient.post('/users/me/device-token', { token }),
+
+  getFavorites: () =>
+    apiClient.get<{ success: boolean; data: any[]; timestamp: string }>('/users/me/favorites'),
+
+  addFavorite: (facilityId: string) =>
+    apiClient.post(`/users/me/favorites/${facilityId}`),
+
+  removeFavorite: (facilityId: string) =>
+    apiClient.delete(`/users/me/favorites/${facilityId}`),
 };

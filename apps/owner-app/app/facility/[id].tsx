@@ -43,6 +43,7 @@ export default function FacilityEditScreen() {
   const [address, setAddress]         = useState('');
   const [phone, setPhone]             = useState('');
   const [description, setDescription] = useState('');
+  const [shamCashQr, setShamCashQr]   = useState('');
   const [pricePerHour, setPricePerHour] = useState('');
   const [slotDuration, setSlotDuration] = useState('60');
   const [sports, setSports]           = useState<string[]>([]);
@@ -63,6 +64,7 @@ export default function FacilityEditScreen() {
     setName(f.name ?? '');
     setAddress(f.address ?? '');
     setPhone(f.phone ?? '');
+    setShamCashQr(f.shamCashQr ?? '');
     setDescription(f.description ?? '');
     setPricePerHour(String(f.pricePerSlot ?? f.pricePerHour ?? ''));
     setSlotDuration(String(f.slotDurationMinutes ?? 60));
@@ -108,6 +110,7 @@ export default function FacilityEditScreen() {
       name: name.trim(),
       address: address.trim(),
       phone: phone.trim() || undefined,
+      shamCashQr: shamCashQr.trim() || undefined,
       description: description.trim() || undefined,
       pricePerSlot: Number(pricePerHour),
       slotDurationMinutes: Number(slotDuration),
@@ -160,6 +163,8 @@ export default function FacilityEditScreen() {
             <Field label="العنوان *" value={address} onChangeText={setAddress} placeholder="الحي، المدينة" />
             <Divider />
             <Field label="رقم الجوال" value={phone} onChangeText={setPhone} placeholder="+963XXXXXXXXX" keyboardType="phone-pad" />
+            <Divider />
+            <Field label="QR شام كاش" value={shamCashQr} onChangeText={setShamCashQr} placeholder="ضع نص/رابط QR" />
             <Divider />
             <Field label="وصف الملعب" value={description} onChangeText={setDescription} placeholder="وصف مختصر..." multiline />
           </GlassCard>

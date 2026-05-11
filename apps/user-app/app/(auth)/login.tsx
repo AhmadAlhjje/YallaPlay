@@ -15,7 +15,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading]   = useState(false);
-  const { login } = useAuthStore();
+  const { login, sendOtp } = useAuthStore();
 
   const isPhoneValid = /^\+963\d{9}$/.test(phone);
   const canSubmit    = isPhoneValid && password.length >= 6;
@@ -24,8 +24,13 @@ export default function LoginScreen() {
     if (!canSubmit) return;
     setLoading(true);
     try {
-      await login(phone, password);
-      router.replace('/(tabs)');
+      const { requiresOtp } = await login(phone, password);
+      if (requiresOtp) {
+        await sendOtp(phone);
+        router.replace({ pathname: '/(auth)/otp', params: { phone } });
+      } else {
+        router.replace('/(tabs)');
+      }
     } catch (err: any) {
       Alert.alert('خطأ في تسجيل الدخول', err?.response?.data?.message ?? 'رقم الهاتف أو كلمة المرور غير صحيحة');
     } finally {

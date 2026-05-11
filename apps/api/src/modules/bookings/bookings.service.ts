@@ -125,7 +125,7 @@ export class BookingsService {
 
     this.logger.log(`Booking created: ${booking._id} | User: ${userId} | Facility: ${dto.facilityId}`);
 
-    return this.bookingModel.findById(booking._id).populate('facilityId', 'name address phone images').lean() as unknown as BookingDocument;
+    return this.bookingModel.findById(booking._id).populate('facilityId', 'name address phone images shamCashQr').lean() as unknown as BookingDocument;
   }
 
   // ─── Confirm Booking (Owner scans QR) ─────────────────────────────────────
@@ -163,41 +163,68 @@ export class BookingsService {
       );
     }
 
-    // 5. Atomic confirm + grant points in ONE update
-    const updated = await this.bookingModel.findByIdAndUpdate(
-      payload.bookingId,
-      {
-        $set: {
-          status: 'confirmed',
-          paymentStatus: 'paid',
-          confirmedAt: new Date(),
-          pointsEarned: POINTS_PER_BOOKING,
-          expiresAt: undefined, // Remove TTL — confirmed bookings don't expire
-        },
-      },
-      { new: true },
-    );
+    const updated = await this.finalizeConfirmation(payload.bookingId, booking, facility);
+    this.logger.log(`Booking confirmed: ${payload.bookingId}`);
+    return updated;
+  }
 
-    // 6. Grant points to user atomically
-    await this.userModel.updateOne(
-      { _id: booking.userId },
-      { $inc: { points: POINTS_PER_BOOKING } },
-    );
+  // ─── Athlete: Mark payment submitted ─────────────────────────────────────
 
-    // 7. Increment facility booking counter (denormalized for "popular" sort)
-    await this.facilitiesService.incrementBookingCount(payload.facilityId);
+  async markPaymentSubmitted(bookingId: string, userId: string, screenshot?: string): Promise<void> {
+    const booking = await this.bookingModel
+      .findById(bookingId)
+      .populate('facilityId')
+      .lean();
+    if (!booking) throw new NotFoundException('الحجز غير موجود.');
 
-    // 8. Queue confirmation notification to user
-    await this.notificationQueue.add('booking_confirmed', {
-      userId: booking.userId.toString(),
-      bookingId: payload.bookingId,
+    const facility = booking.facilityId as unknown as FacilityDocument;
+    if (booking.userId.toString() !== userId) {
+      throw new ForbiddenException('ليس لديك صلاحية لهذا الحجز.');
+    }
+
+    if (booking.status !== 'pending_payment') {
+      throw new BadRequestException('لا يمكن إرسال الدفع لهذا الحجز.');
+    }
+
+    const updateData: Record<string, any> = { paymentSubmittedAt: new Date() };
+    if (screenshot) updateData['paymentScreenshot'] = screenshot;
+
+    await this.bookingModel.updateOne({ _id: bookingId }, { $set: updateData });
+
+    const user = await this.userModel.findById(userId).select('name phone').lean();
+
+    await this.notificationQueue.add('payment_submitted', {
+      ownerId: facility.ownerId.toString(),
+      bookingId,
       facilityName: facility.name,
       date: booking.date,
       startTime: booking.startTime,
+      userName: user?.name ?? 'لاعب',
+      userPhone: user?.phone ?? '—',
     });
+  }
 
-    this.logger.log(`Booking confirmed: ${payload.bookingId}`);
-    return updated!;
+  // ─── Owner: Manual confirm ───────────────────────────────────────────────
+
+  async confirmBookingManual(bookingId: string, ownerId: string): Promise<BookingDocument> {
+    const booking = await this.bookingModel
+      .findById(bookingId)
+      .populate('facilityId')
+      .lean();
+    if (!booking) throw new NotFoundException('الحجز غير موجود.');
+
+    const facility = booking.facilityId as unknown as FacilityDocument;
+    if (facility.ownerId.toString() !== ownerId) {
+      throw new ForbiddenException('ليس لديك صلاحية لتأكيد هذا الحجز.');
+    }
+
+    if (booking.status !== 'pending_payment') {
+      throw new BadRequestException('لا يمكن تأكيد هذا الحجز.');
+    }
+
+    const updated = await this.finalizeConfirmation(bookingId, booking, facility);
+    this.logger.log(`Booking confirmed manually: ${bookingId}`);
+    return updated;
   }
 
   // ─── Cancel Booking ────────────────────────────────────────────────────────
@@ -290,7 +317,7 @@ export class BookingsService {
     const booking = await this.bookingModel
       .findById(bookingId)
       .select('+qrToken')
-      .populate('facilityId', 'name address phone location images')
+      .populate('facilityId', 'name address phone location images shamCashQr')
       .lean();
 
     if (!booking) throw new NotFoundException('الحجز غير موجود.');
@@ -393,5 +420,42 @@ export class BookingsService {
     // Offer resolution will be injected by OffersService in a later step
     // For now returns base price
     return { final: basePrice, discount: 0 };
+  }
+
+  private async finalizeConfirmation(
+    bookingId: string,
+    booking: BookingDocument,
+    facility: FacilityDocument,
+  ): Promise<BookingDocument> {
+    const updated = await this.bookingModel.findByIdAndUpdate(
+      bookingId,
+      {
+        $set: {
+          status: 'confirmed',
+          paymentStatus: 'paid',
+          confirmedAt: new Date(),
+          pointsEarned: POINTS_PER_BOOKING,
+          expiresAt: undefined,
+        },
+      },
+      { new: true },
+    );
+
+    await this.userModel.updateOne(
+      { _id: booking.userId },
+      { $inc: { points: POINTS_PER_BOOKING } },
+    );
+
+    await this.facilitiesService.incrementBookingCount(facility._id.toString());
+
+    await this.notificationQueue.add('booking_confirmed', {
+      userId: booking.userId.toString(),
+      bookingId,
+      facilityName: facility.name,
+      date: booking.date,
+      startTime: booking.startTime,
+    });
+
+    return updated as BookingDocument;
   }
 }

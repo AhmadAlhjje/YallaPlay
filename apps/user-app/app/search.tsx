@@ -106,7 +106,7 @@ export default function SearchScreen() {
             )}
             ListHeaderComponent={
               <SportChip
-                sport="football"
+                sport="all"
                 selected={!sport}
                 onPress={() => { setSport(undefined); setPage(1); }}
                 style={{ marginRight: 8 }}

@@ -42,6 +42,7 @@ export default function NewFacilityScreen() {
   const [address, setAddress]         = useState('');
   const [phone, setPhone]             = useState('');
   const [description, setDescription] = useState('');
+  const [shamCashQr, setShamCashQr]   = useState('');
   const [pricePerSlot, setPricePerSlot] = useState('');
   const [slotDuration, setSlotDuration] = useState('60');
   const [sports, setSports]           = useState<string[]>([]);
@@ -74,6 +75,7 @@ export default function NewFacilityScreen() {
       name: name.trim(),
       address: address.trim(),
       phone: phone.trim() || undefined,
+      shamCashQr: shamCashQr.trim() || undefined,
       description: description.trim() || undefined,
       pricePerSlot: Number(pricePerSlot),
       slotDurationMinutes: Number(slotDuration),
@@ -114,6 +116,8 @@ export default function NewFacilityScreen() {
             <Field label="العنوان *" value={address} onChangeText={setAddress} placeholder="الحي، المدينة" />
             <Divider />
             <Field label="رقم الجوال" value={phone} onChangeText={setPhone} placeholder="+963XXXXXXXXX" keyboardType="phone-pad" />
+            <Divider />
+            <Field label="QR شام كاش" value={shamCashQr} onChangeText={setShamCashQr} placeholder="ضع نص/رابط QR" />
             <Divider />
             <Field label="وصف الملعب" value={description} onChangeText={setDescription} placeholder="وصف مختصر..." multiline />
           </GlassCard>

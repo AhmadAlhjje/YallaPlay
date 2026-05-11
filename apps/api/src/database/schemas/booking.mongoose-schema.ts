@@ -34,6 +34,9 @@ export class Booking {
   @Prop({ type: String, enum: PaymentStatus, default: 'unpaid' })
   paymentStatus: string;
 
+  @Prop()
+  paymentSubmittedAt?: Date;
+
   @Prop({ type: Number, required: true, min: 0 })
   totalPrice: number;
 
@@ -61,6 +64,9 @@ export class Booking {
 
   @Prop({ type: Boolean, default: false })
   sharedViaWhatsapp: boolean;
+
+  @Prop({ type: String })
+  paymentScreenshot?: string;
 
   // TTL: MongoDB auto-deletes abandoned pending_payment bookings after 15 min
   @Prop()

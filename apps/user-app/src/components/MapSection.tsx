@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, TouchableOpacity, Text, StyleSheet, Platform, Linking } from 'react-native';
 import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps';
+import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius } from '../theme';
 
 interface MapSectionProps {
@@ -33,20 +34,53 @@ export function MapSection({ latitude, longitude, title }: MapSectionProps) {
       >
         <Marker coordinate={{ latitude, longitude }} title={title} />
       </MapView>
-      <TouchableOpacity style={styles.overlay} onPress={openInMaps}>
-        <Text style={[Typography.labelMd, { color: Colors.brand.primary }]}>فتح في الخريطة ←</Text>
+
+      {/* Open in maps button */}
+      <TouchableOpacity style={styles.openBtn} onPress={openInMaps} activeOpacity={0.85}>
+        <View style={styles.openBtnIcon}>
+          <Ionicons name="location-sharp" size={14} color="#fff" />
+        </View>
+        <Text style={styles.openBtnText}>فتح في الخريطة</Text>
+        <Ionicons name="chevron-back" size={14} color={Colors.brand.primary} />
       </TouchableOpacity>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { borderRadius: Radius.lg, overflow: 'hidden', marginBottom: Spacing.md },
+  container: {
+    borderRadius: Radius.xl,
+    overflow: 'hidden',
+    marginBottom: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border.strong,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 4,
+  },
   map: { width: '100%', height: 180 },
-  overlay: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: Colors.background.primary + 'CC',
-    paddingVertical: 10, paddingHorizontal: Spacing.xl,
-    alignItems: 'flex-end',
+
+  openBtn: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: Spacing.lg,
+    backgroundColor: Colors.background.elevated,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border.default,
+  },
+  openBtnIcon: {
+    width: 24, height: 24, borderRadius: 6,
+    backgroundColor: Colors.brand.primary,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  openBtnText: {
+    flex: 1,
+    fontSize: 13, fontWeight: '600',
+    color: Colors.brand.primary,
+    textAlign: 'right',
   },
 });

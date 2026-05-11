@@ -45,6 +45,9 @@ export class User {
   @Prop({ type: [String], default: [] })
   deviceTokens: string[];
 
+  @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Facility' }], default: [] })
+  favorites: Types.ObjectId[];
+
   // Password auth
   @Prop({ select: false })
   passwordHash?: string;

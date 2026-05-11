@@ -14,6 +14,9 @@ export const bookingsApi = {
   markSharedWhatsapp: (id: string) =>
     apiClient.patch(`/bookings/${id}/share-whatsapp`),
 
+  markPaymentSubmitted: (id: string, screenshot?: string) =>
+    apiClient.patch(`/bookings/${id}/payment-submitted`, screenshot ? { screenshot } : {}),
+
   getMyBookings: (filter: 'upcoming' | 'past' | 'all', page = 1, limit = 20) =>
     apiClient.get<{ data: { bookings: any[]; pagination: any } }>('/users/me/bookings', {
       params: { filter, page, limit },

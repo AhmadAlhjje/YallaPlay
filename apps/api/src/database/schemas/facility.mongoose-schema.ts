@@ -37,6 +37,9 @@ export class Facility {
   @Prop()
   phone?: string;
 
+  @Prop()
+  shamCashQr?: string;
+
   @Prop({ type: Number, required: true, min: 30, max: 180 })
   slotDurationMinutes: number;
 

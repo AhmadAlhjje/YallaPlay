@@ -4,9 +4,11 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { useAuthStore } from '../src/store/auth.store';
 import { useLocationStore } from '../src/store/location.store';
+import { useFavoritesStore } from '../src/store/favorites.store';
+import { queryClient } from '../src/lib/query-client';
 import { Colors } from '../src/theme';
 
 class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | null }> {
@@ -27,24 +29,25 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: Error | 
   }
 }
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      retry: 2,
-      staleTime: 30_000,
-      refetchOnWindowFocus: false,
-    },
-  },
-});
 
 export default function RootLayout() {
-  const { initialize } = useAuthStore();
+  const { initialize, isAuthenticated } = useAuthStore();
   const { requestLocation } = useLocationStore();
+  const { initialize: initFavorites, reset: resetFavorites } = useFavoritesStore();
 
   useEffect(() => {
     initialize();
     requestLocation();
   }, []);
+
+  // Load favorites when authenticated, clear them on logout
+  useEffect(() => {
+    if (isAuthenticated) {
+      initFavorites();
+    } else {
+      resetFavorites();
+    }
+  }, [isAuthenticated]);
 
   return (
     <ErrorBoundary>

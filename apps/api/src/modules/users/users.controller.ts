@@ -10,6 +10,9 @@ import {
   DefaultValuePipe,
   Post,
   Delete,
+  Param,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { UsersService } from './users.service';
@@ -91,5 +94,31 @@ export class UsersController {
   @ApiOperation({ summary: 'Remove FCM device token on logout' })
   removeDeviceToken(@CurrentUser() user: JwtPayloadType, @Body('token') token: string) {
     return this.usersService.removeDeviceToken(user.sub, token);
+  }
+
+  @Get('me/favorites')
+  @ApiOperation({ summary: 'Get user favorite facilities' })
+  getFavorites(@CurrentUser() user: JwtPayloadType) {
+    return this.usersService.getFavorites(user.sub);
+  }
+
+  @Post('me/favorites/:facilityId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Add facility to favorites' })
+  addFavorite(
+    @CurrentUser() user: JwtPayloadType,
+    @Param('facilityId') facilityId: string,
+  ) {
+    return this.usersService.addFavorite(user.sub, facilityId);
+  }
+
+  @Delete('me/favorites/:facilityId')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Remove facility from favorites' })
+  removeFavorite(
+    @CurrentUser() user: JwtPayloadType,
+    @Param('facilityId') facilityId: string,
+  ) {
+    return this.usersService.removeFavorite(user.sub, facilityId);
   }
 }

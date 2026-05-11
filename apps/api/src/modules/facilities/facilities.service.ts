@@ -85,6 +85,28 @@ export class FacilitiesService {
       filter['sports'] = dto.sport;
     }
 
+    // Featured filter
+    if (dto.featured) {
+      filter['tags'] = { $in: ['featured'] };
+    }
+
+    // Bookings date filter (facilities that have bookings on this date)
+    if (dto.bookingsDate) {
+      const facilityIds = await this.bookingModel.distinct('facilityId', {
+        date: dto.bookingsDate,
+        status: { $in: ['confirmed', 'pending_payment'] },
+      });
+
+      if (facilityIds.length === 0) {
+        return {
+          facilities: [],
+          pagination: { page: dto.page, limit: dto.limit, total: 0, pages: 0 },
+        };
+      }
+
+      filter['_id'] = { $in: facilityIds };
+    }
+
     let queryBuilder = this.facilityModel.find(filter);
 
     // Geo filter — must have coordinates to use $near

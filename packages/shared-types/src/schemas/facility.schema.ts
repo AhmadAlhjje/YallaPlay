@@ -19,6 +19,7 @@ export const FacilitySchema = z.object({
   location: GeoPointSchema.optional(),
   address: z.string().min(5).max(300),
   phone: z.string().optional(),
+  shamCashQr: z.string().max(2000).optional(),
   slotDurationMinutes: z.number().int().min(30).max(180),
   operatingHours: z.record(z.enum(DayOfWeek), OperatingHoursDaySchema),
   pricePerSlot: z.number().positive(),
@@ -54,6 +55,8 @@ export const FacilitySearchDto = z.object({
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(50).default(20),
   sortBy: z.enum(['nearest', 'popular', 'rating', 'price_asc', 'price_desc']).default('popular'),
+  featured: z.coerce.boolean().optional(),
+  bookingsDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'صيغة التاريخ: YYYY-MM-DD').optional(),
 });
 
 export type Facility = z.infer<typeof FacilitySchema>;

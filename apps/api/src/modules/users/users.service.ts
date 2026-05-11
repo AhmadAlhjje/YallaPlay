@@ -51,6 +51,32 @@ export class UsersService {
     );
   }
 
+  async addFavorite(userId: string, facilityId: string): Promise<void> {
+    if (!Types.ObjectId.isValid(facilityId)) throw new BadRequestException('معرّف الملعب غير صحيح');
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $addToSet: { favorites: new Types.ObjectId(facilityId) } },
+    );
+  }
+
+  async removeFavorite(userId: string, facilityId: string): Promise<void> {
+    if (!Types.ObjectId.isValid(facilityId)) throw new BadRequestException('معرّف الملعب غير صحيح');
+    await this.userModel.updateOne(
+      { _id: userId },
+      { $pull: { favorites: new Types.ObjectId(facilityId) } },
+    );
+  }
+
+  async getFavorites(userId: string) {
+    const user = await this.userModel
+      .findById(userId)
+      .select('favorites')
+      .populate('favorites', 'name address images rating pricePerSlot sports')
+      .lean();
+    if (!user) throw new NotFoundException('المستخدم غير موجود');
+    return user.favorites ?? [];
+  }
+
   async getPointsBalance(userId: string): Promise<{ points: number }> {
     const user = await this.userModel.findById(userId).select('points').lean();
     if (!user) throw new NotFoundException('المستخدم غير موجود.');

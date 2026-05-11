@@ -57,6 +57,14 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="favorites"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="heart-outline" iconFocused="heart" label="المفضلة" focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="waitlist"
         options={{
           tabBarIcon: ({ focused }) => (

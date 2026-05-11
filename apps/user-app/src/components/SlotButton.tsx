@@ -12,9 +12,11 @@ interface SlotButtonProps {
 }
 
 export function SlotButton({ slot, selected = false, onPress, style }: SlotButtonProps) {
-  const isBooked = slot.isBooked;
-  const isClosed = !slot.isAvailable && !slot.isBooked;
-  const disabled = isBooked || isClosed;
+  const status = slot.status ?? 'closed';
+  const isBooked = status === 'booked';
+  const isPending = status === 'pending';
+  const isClosed = status === 'closed';
+  const disabled = status !== 'available';
 
   return (
     <TouchableOpacity
@@ -29,6 +31,7 @@ export function SlotButton({ slot, selected = false, onPress, style }: SlotButto
         styles.slot,
         selected  && styles.slotSelected,
         isBooked  && styles.slotBooked,
+        isPending && styles.slotPending,
         isClosed  && styles.slotClosed,
         style,
       ]}
@@ -37,7 +40,7 @@ export function SlotButton({ slot, selected = false, onPress, style }: SlotButto
         {slot.startTime}
       </Text>
       <Text style={[styles.sub, selected && styles.subSelected, disabled && styles.dimmed]}>
-        {isBooked ? 'محجوز' : isClosed ? 'مغلق' : `${slot.price} ر.س`}
+        {isBooked ? 'محجوز' : isPending ? 'معلّق' : isClosed ? 'مغلق' : `${slot.price} ر.س`}
       </Text>
     </TouchableOpacity>
   );
@@ -54,6 +57,7 @@ const styles = StyleSheet.create({
   },
   slotSelected: { backgroundColor: Colors.brand.primary, borderColor: Colors.brand.primary },
   slotBooked:   { backgroundColor: Colors.errorBg, borderColor: Colors.error + '44' },
+  slotPending:  { backgroundColor: Colors.warningBg, borderColor: Colors.warning + '44' },
   slotClosed:   { backgroundColor: Colors.background.secondary, borderColor: Colors.border.default },
   time:         { ...Typography.labelMd, color: Colors.brand.dark },
   timeSelected: { color: '#FFFFFF' },

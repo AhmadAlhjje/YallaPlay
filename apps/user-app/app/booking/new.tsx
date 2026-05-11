@@ -1,44 +1,49 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert,
-  KeyboardAvoidingView, Platform, Linking,
+  KeyboardAvoidingView, Platform, Linking, Image as RNImage,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import QRCode from 'react-native-qrcode-svg';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { bookingsApi } from '../../src/api/bookings.api';
 import { GlassCard } from '../../src/components/GlassCard';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
 
-const PAYMENT_METHODS = [
-  { key: 'cash',      label: 'كاش',      icon: '💵', desc: 'ادفع عند الوصول' },
-  { key: 'card',      label: 'بطاقة',    icon: '💳', desc: 'فيزا / مدى' },
-  { key: 'apple_pay', label: 'Apple Pay', icon: '🍎', desc: 'ادفع بـ Apple Pay' },
-] as const;
-
-type PaymentMethod = typeof PAYMENT_METHODS[number]['key'];
-type Step = 1 | 2 | 3;
+type Step = 1 | 2;
 
 export default function NewBookingScreen() {
   const {
-    facilityId, facilityName, date, startTime, endTime, price, sport,
+    facilityId, facilityName, date, startTime, endTime, price, sport, shamCashQr,
   } = useLocalSearchParams<{
     facilityId: string; facilityName: string; date: string;
-    startTime: string; endTime: string; price: string; sport: string;
+    startTime: string; endTime: string; price: string; sport: string; shamCashQr?: string;
   }>();
 
-  const [step, setStep]                   = useState<Step>(1);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
-  const [loading, setLoading]             = useState(false);
-  const [bookingId, setBookingId]         = useState<string | null>(null);
-  const [qrToken, setQrToken]             = useState<string | null>(null);
-  const [bookingRef, setBookingRef]       = useState<string | null>(null);
+  const [step, setStep]             = useState<Step>(1);
+  const [loading, setLoading]       = useState(false);
+  const [bookingId, setBookingId]   = useState<string | null>(null);
+  const [bookingRef, setBookingRef] = useState<string | null>(null);
+  const [screenshot, setScreenshot] = useState<string | null>(null);
+  const [submitted, setSubmitted]   = useState(false);
 
   const totalPrice = parseFloat(price ?? '0');
 
-  const handleConfirm = async () => {
+  const VALID_SPORTS = ['football', 'basketball', 'tennis', 'volleyball', 'padel', 'squash', 'badminton', 'swimming'];
+
+  const handleCreateBooking = async () => {
+    if (!sport || !VALID_SPORTS.includes(sport)) {
+      Alert.alert('خطأ', 'لم يتم تحديد الرياضة. ارجع واختر وقتاً مرة أخرى.');
+      return;
+    }
+    if (!date || !startTime || !facilityId) {
+      Alert.alert('خطأ', 'بيانات الحجز غير مكتملة. ارجع وحاول مرة أخرى.');
+      return;
+    }
     setLoading(true);
     try {
       const res = await bookingsApi.create({
@@ -46,18 +51,60 @@ export default function NewBookingScreen() {
         date,
         startTime,
         sport: sport as any,
-        paymentMethod: paymentMethod as any,
+        paymentMethod: 'qr_cash' as any,
       });
       const booking = res.data?.data;
       setBookingId(booking._id);
-      setQrToken(booking.qrToken);
       setBookingRef(booking.bookingRef ?? booking._id.slice(-8).toUpperCase());
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      setStep(3);
+      setStep(2);
     } catch (err: any) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-      const msg = err?.response?.data?.message ?? 'تعذّر إتمام الحجز';
-      Alert.alert('خطأ', msg);
+      const errors = err?.response?.data?.errors as Array<{ field: string; message: string }> | undefined;
+      const detail = errors?.map((e) => `• ${e.field}: ${e.message}`).join('\n') ?? '';
+      Alert.alert(
+        'خطأ في البيانات',
+        `${err?.response?.data?.message ?? 'تعذّر إتمام الحجز'}${detail ? `\n\n${detail}` : ''}`,
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const pickScreenshot = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('الصلاحيات', 'يرجى منح صلاحية الوصول إلى الصور');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      quality: 0.5,
+      base64: true,
+      allowsEditing: false,
+    });
+    if (!result.canceled && result.assets[0]) {
+      const asset = result.assets[0];
+      setScreenshot(asset.uri);
+      // store base64 for upload (with data URI prefix stripped)
+      (pickScreenshot as any)._b64 = asset.base64 ?? null;
+    }
+  };
+  // attach base64 storage to the function reference
+  (pickScreenshot as any)._b64 = null;
+
+  const handleSubmitPayment = async () => {
+    if (!bookingId) return;
+    setLoading(true);
+    try {
+      const b64: string | null = (pickScreenshot as any)._b64;
+      const screenshotData = b64 ? `data:image/jpeg;base64,${b64}` : undefined;
+      await bookingsApi.markPaymentSubmitted(bookingId, screenshotData);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setSubmitted(true);
+    } catch (err: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر إرسال إشعار الدفع');
     } finally {
       setLoading(false);
     }
@@ -67,8 +114,9 @@ export default function NewBookingScreen() {
     if (!bookingId) return;
     try { await bookingsApi.markSharedWhatsapp(bookingId); } catch { /* ignore */ }
     const text = `حجزت ملعب ${facilityName} بتاريخ ${date} الساعة ${startTime} - ${endTime} 🏟️`;
-    const url = `whatsapp://send?text=${encodeURIComponent(text)}`;
-    Linking.openURL(url).catch(() => Alert.alert('تنبيه', 'تطبيق واتساب غير مثبّت'));
+    Linking.openURL(`whatsapp://send?text=${encodeURIComponent(text)}`).catch(() =>
+      Alert.alert('تنبيه', 'تطبيق واتساب غير مثبّت'),
+    );
   };
 
   return (
@@ -76,146 +124,168 @@ export default function NewBookingScreen() {
       <SafeAreaView style={styles.safe}>
         {/* Header */}
         <View style={styles.header}>
-          {step < 3 && (
-            <TouchableOpacity onPress={() => (step === 1 ? router.back() : setStep((s) => (s - 1) as Step))}>
-              <Text style={[Typography.bodyLg, { color: Colors.text.secondary }]}>← رجوع</Text>
-            </TouchableOpacity>
-          )}
-          <Text style={[Typography.h3, { color: Colors.text.primary }]}>
-            {step === 1 ? 'تفاصيل الحجز' : step === 2 ? 'طريقة الدفع' : 'تم الحجز!'}
+          <TouchableOpacity
+            onPress={() => (step === 1 ? router.back() : setStep(1))}
+            style={styles.backBtn}
+          >
+            <Ionicons name="chevron-forward" size={20} color={Colors.text.primary} />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>
+            {step === 1 ? 'تفاصيل الحجز' : 'الدفع عبر شام كاش'}
           </Text>
           <View style={styles.stepRow}>
-            {[1, 2, 3].map((s) => (
+            {[1, 2].map((s) => (
               <View key={s} style={[styles.stepDot, step >= s && styles.stepDotActive]} />
             ))}
           </View>
         </View>
 
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
 
-            {/* STEP 1 — Booking Summary */}
+            {/* ── STEP 1: Booking Summary ───────────────────────────── */}
             {step === 1 && (
               <>
                 <GlassCard style={styles.summaryCard}>
-                  <Text style={[Typography.h3, { color: Colors.text.primary, marginBottom: Spacing.lg }]}>
-                    {facilityName}
-                  </Text>
-                  <InfoRow icon="📅" label="التاريخ" value={date} />
-                  <InfoRow icon="🕐" label="الوقت" value={`${startTime} – ${endTime}`} />
-                  <InfoRow icon="⏱️" label="المدة" value={calcDuration(startTime, endTime)} />
-                  {sport && <InfoRow icon="🏟️" label="الرياضة" value={sport} />}
-                  <View style={styles.priceDivider} />
+                  <Text style={styles.facilityName}>{facilityName}</Text>
+
+                  <InfoRow icon="calendar-outline" label="التاريخ"  value={date} />
+                  <InfoRow icon="time-outline"     label="الوقت"    value={`${startTime} – ${endTime}`} />
+                  <InfoRow icon="hourglass-outline" label="المدة"   value={calcDuration(startTime, endTime)} />
+                  {sport && <InfoRow icon="football-outline" label="الرياضة" value={sport} />}
+
+                  <View style={styles.divider} />
+
                   <View style={styles.priceRow}>
-                    <Text style={[Typography.h2, { color: Colors.brand.primary }]}>
-                      {totalPrice} ر.س
-                    </Text>
-                    <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>الإجمالي</Text>
+                    <Text style={styles.priceLabel}>الإجمالي</Text>
+                    <Text style={styles.priceValue}>{totalPrice} ر.س</Text>
                   </View>
                 </GlassCard>
 
-                <GlassCard style={{ ...styles.summaryCard, backgroundColor: Colors.successBg, borderColor: Colors.success + '33' }}>
-                  <Text style={[Typography.labelMd, { color: Colors.success }]}>
-                    ✅ ستحصل على 5 نقاط ولاء بعد تأكيد الحجز
-                  </Text>
-                </GlassCard>
+                <View style={styles.pointsHint}>
+                  <Ionicons name="star" size={14} color="#D97706" />
+                  <Text style={styles.pointsHintText}>ستحصل على 5 نقاط ولاء بعد تأكيد الحجز</Text>
+                </View>
 
                 <PrimaryButton
-                  label="متابعة"
-                  onPress={() => setStep(2)}
-                  style={{ marginTop: Spacing.xl }}
-                />
-              </>
-            )}
-
-            {/* STEP 2 — Payment Method */}
-            {step === 2 && (
-              <>
-                <Text style={[Typography.bodyMd, { color: Colors.text.secondary, textAlign: 'center', marginBottom: Spacing.xl }]}>
-                  اختر طريقة الدفع
-                </Text>
-                {PAYMENT_METHODS.map((pm) => (
-                  <TouchableOpacity
-                    key={pm.key}
-                    onPress={() => setPaymentMethod(pm.key)}
-                    style={[
-                      styles.paymentOption,
-                      paymentMethod === pm.key && styles.paymentOptionActive,
-                    ]}
-                  >
-                    <Text style={{ fontSize: 28 }}>{pm.icon}</Text>
-                    <View style={{ flex: 1, marginHorizontal: Spacing.md }}>
-                      <Text style={[Typography.labelLg, { color: Colors.text.primary }]}>{pm.label}</Text>
-                      <Text style={[Typography.bodyMd, { color: Colors.text.tertiary }]}>{pm.desc}</Text>
-                    </View>
-                    <View style={[styles.radio, paymentMethod === pm.key && styles.radioActive]}>
-                      {paymentMethod === pm.key && <View style={styles.radioDot} />}
-                    </View>
-                  </TouchableOpacity>
-                ))}
-
-                <PrimaryButton
-                  label={`تأكيد الحجز — ${totalPrice} ر.س`}
-                  onPress={handleConfirm}
+                  label={loading ? 'جاري إنشاء الحجز...' : 'متابعة للدفع'}
+                  onPress={handleCreateBooking}
                   loading={loading}
                   style={{ marginTop: Spacing.xl }}
                 />
               </>
             )}
 
-            {/* STEP 3 — QR Code */}
-            {step === 3 && qrToken && (
+            {/* ── STEP 2: ShamCash QR + Screenshot Upload ──────────── */}
+            {step === 2 && (
               <>
-                <View style={styles.successIcon}>
-                  <Text style={{ fontSize: 64 }}>🎉</Text>
+                {/* QR Card */}
+                <View style={styles.qrCard}>
+                  <Text style={styles.qrTitle}>امسح رمز شام كاش</Text>
+                  <Text style={styles.qrSubtitle}>افتح تطبيق شام كاش وامسح الرمز لإتمام الدفع</Text>
+
+                  <View style={styles.qrBox}>
+                    {shamCashQr ? (
+                      <QRCode
+                        value={String(shamCashQr)}
+                        size={190}
+                        backgroundColor="white"
+                        color="#111"
+                      />
+                    ) : (
+                      <View style={styles.noQrBox}>
+                        <Ionicons name="qr-code-outline" size={52} color={Colors.text.tertiary} />
+                        <Text style={styles.noQrText}>لم يتم إعداد QR لهذا الملعب</Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {bookingRef && (
+                    <View style={styles.refRow}>
+                      <Text style={styles.refLabel}>رقم الحجز</Text>
+                      <Text style={styles.refValue}>{bookingRef}</Text>
+                    </View>
+                  )}
                 </View>
 
-                <Text style={[Typography.h2, { color: Colors.text.primary, textAlign: 'center', marginBottom: Spacing.sm }]}>
-                  تم الحجز بنجاح!
-                </Text>
-                <Text style={[Typography.bodyMd, { color: Colors.text.secondary, textAlign: 'center', marginBottom: Spacing.xl }]}>
-                  أرِ هذا الرمز للمسؤول عند الوصول
-                </Text>
-
-                <GlassCard style={styles.qrCard}>
-                  <View style={styles.qrWrapper}>
-                    <QRCode
-                      value={qrToken}
-                      size={200}
-                      backgroundColor="transparent"
-                      color={Colors.text.primary}
-                    />
+                {/* Payment info */}
+                <GlassCard style={styles.infoCard}>
+                  <InfoRow icon="business-outline"  label="الملعب"  value={facilityName} />
+                  <InfoRow icon="calendar-outline"  label="التاريخ" value={date} />
+                  <InfoRow icon="time-outline"      label="الوقت"   value={`${startTime} – ${endTime}`} />
+                  <View style={[styles.divider, { marginVertical: Spacing.sm }]} />
+                  <View style={styles.priceRow}>
+                    <Text style={styles.priceLabel}>المبلغ المطلوب</Text>
+                    <Text style={styles.priceValue}>{totalPrice} ر.س</Text>
                   </View>
-                  <Text style={[Typography.numericLg, { color: Colors.brand.primary, marginTop: Spacing.lg, letterSpacing: 4 }]}>
-                    {bookingRef}
-                  </Text>
-                  <Text style={[Typography.labelSm, { color: Colors.text.tertiary, marginTop: 4 }]}>
-                    رمز الحجز
-                  </Text>
                 </GlassCard>
 
-                <InfoRow icon="📅" label="التاريخ" value={date} style={{ marginTop: Spacing.xl }} />
-                <InfoRow icon="🕐" label="الوقت" value={`${startTime} – ${endTime}`} />
-                <InfoRow icon="🏟️" label="الملعب" value={facilityName} />
+                {/* Screenshot upload */}
+                {!submitted && (
+                  <View style={styles.uploadSection}>
+                    <Text style={styles.uploadTitle}>ارفع إشعار الدفع</Text>
+                    <Text style={styles.uploadSubtitle}>
+                      بعد الدفع عبر شام كاش، ارفع لقطة شاشة للتأكيد ليراها صاحب الملعب
+                    </Text>
 
-                <View style={styles.actionRow}>
-                  <TouchableOpacity onPress={handleShareWhatsapp} style={styles.whatsappBtn}>
-                    <Text style={{ fontSize: 20 }}>📱</Text>
-                    <Text style={[Typography.labelMd, { color: '#25D366' }]}>شارك واتساب</Text>
-                  </TouchableOpacity>
-                  <PrimaryButton
-                    label="تفاصيل الحجز"
-                    onPress={() => { if (bookingId) router.replace(`/booking/${bookingId}`); }}
-                    style={{ flex: 1 }}
-                  />
-                </View>
+                    <TouchableOpacity style={styles.uploadBtn} onPress={pickScreenshot} activeOpacity={0.8}>
+                      {screenshot ? (
+                        <>
+                          <RNImage source={{ uri: screenshot }} style={styles.previewImg} />
+                          <View style={styles.previewOverlay}>
+                            <Ionicons name="camera" size={20} color="#fff" />
+                            <Text style={styles.previewOverlayText}>تغيير الصورة</Text>
+                          </View>
+                        </>
+                      ) : (
+                        <>
+                          <View style={styles.uploadIcon}>
+                            <Ionicons name="image-outline" size={28} color={Colors.brand.primary} />
+                          </View>
+                          <Text style={styles.uploadBtnLabel}>اختر لقطة الشاشة</Text>
+                          <Text style={styles.uploadBtnHint}>PNG أو JPG من معرض الصور</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+
+                    <PrimaryButton
+                      label={loading ? 'جاري الإرسال...' : 'إرسال إشعار الدفع'}
+                      onPress={handleSubmitPayment}
+                      loading={loading}
+                      disabled={!shamCashQr && !screenshot}
+                      style={{ marginTop: Spacing.lg }}
+                    />
+                  </View>
+                )}
+
+                {/* Success state */}
+                {submitted && (
+                  <View style={styles.successCard}>
+                    <View style={styles.successIcon}>
+                      <Ionicons name="checkmark-circle" size={48} color={Colors.brand.primary} />
+                    </View>
+                    <Text style={styles.successTitle}>تم إرسال إشعار الدفع</Text>
+                    <Text style={styles.successDesc}>
+                      تم إشعار صاحب الملعب وسيقوم بتأكيد الحجز قريباً
+                    </Text>
+
+                    <View style={styles.actionRow}>
+                      <TouchableOpacity onPress={handleShareWhatsapp} style={styles.whatsappBtn}>
+                        <Text style={{ fontSize: 18 }}>📱</Text>
+                        <Text style={styles.whatsappText}>شارك واتساب</Text>
+                      </TouchableOpacity>
+                      <PrimaryButton
+                        label="تفاصيل الحجز"
+                        onPress={() => { if (bookingId) router.replace(`/booking/${bookingId}`); }}
+                        style={{ flex: 1 }}
+                      />
+                    </View>
+                  </View>
+                )}
+
+                <View style={{ height: 40 }} />
               </>
             )}
-
-            <View style={{ height: 40 }} />
           </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
@@ -223,11 +293,16 @@ export default function NewBookingScreen() {
   );
 }
 
-function InfoRow({ icon, label, value, style }: { icon: string; label: string; value: string; style?: any }) {
+function InfoRow({ icon, label, value }: { icon: React.ComponentProps<typeof Ionicons>['name']; label: string; value: string }) {
   return (
-    <View style={[{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md }, style]}>
-      <Text style={[Typography.bodyMd, { color: Colors.text.tertiary }]}>{icon} {label}</Text>
-      <Text style={[Typography.labelMd, { color: Colors.text.primary }]}>{value}</Text>
+    <View style={styles.infoRow}>
+      <Text style={styles.infoValue}>{value}</Text>
+      <View style={styles.infoLeft}>
+        <View style={styles.infoIconWrap}>
+          <Ionicons name={icon} size={14} color={Colors.brand.primary} />
+        </View>
+        <Text style={styles.infoLabel}>{label}</Text>
+      </View>
     </View>
   );
 }
@@ -244,51 +319,162 @@ function calcDuration(start: string, end: string): string {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background.primary },
-  safe: { flex: 1, paddingHorizontal: Spacing.xl },
-  header: { paddingVertical: Spacing.lg, gap: Spacing.sm },
-  stepRow: { flexDirection: 'row', gap: 6, marginTop: Spacing.sm },
+  safe: { flex: 1 },
+
+  header: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border.default,
+  },
+  backBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1, borderColor: Colors.border.default,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  headerTitle: { fontSize: 16, fontWeight: '700', color: Colors.text.primary },
+  stepRow: { flexDirection: 'row', gap: 6 },
   stepDot: {
-    width: 24, height: 4, borderRadius: 2,
+    width: 28, height: 4, borderRadius: 2,
     backgroundColor: Colors.border.default,
   },
   stepDotActive: { backgroundColor: Colors.brand.primary },
-  scroll: { paddingTop: Spacing.sm },
-  summaryCard: { marginBottom: Spacing.md, padding: Spacing.xl },
-  priceDivider: { height: 1, backgroundColor: Colors.border.default, marginVertical: Spacing.md },
-  priceRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  paymentOption: {
-    flexDirection: 'row', alignItems: 'center',
-    padding: Spacing.lg,
-    borderRadius: Radius.lg,
-    borderWidth: 1.5, borderColor: Colors.border.default,
-    backgroundColor: Colors.background.secondary,
+
+  scroll: { padding: Spacing.xl, paddingBottom: 60 },
+
+  // Step 1
+  summaryCard: { padding: Spacing.xl, marginBottom: Spacing.md },
+  facilityName: {
+    fontSize: 18, fontWeight: '800',
+    color: Colors.text.primary,
+    textAlign: 'right',
+    marginBottom: Spacing.lg,
+  },
+  divider: { height: 1, backgroundColor: Colors.border.default, marginVertical: Spacing.md },
+  priceRow: { flexDirection: 'row-reverse', justifyContent: 'space-between', alignItems: 'center' },
+  priceLabel: { fontSize: 13, color: Colors.text.secondary, fontWeight: '500' },
+  priceValue: { fontSize: 22, fontWeight: '800', color: Colors.brand.primary },
+
+  pointsHint: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#FFFBEB',
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
     marginBottom: Spacing.md,
   },
-  paymentOptionActive: {
-    borderColor: Colors.brand.primary,
-    backgroundColor: Colors.brand.light,
+  pointsHintText: { fontSize: 13, color: '#92400E', fontWeight: '500', flex: 1, textAlign: 'right' },
+
+  // Step 2 — QR
+  qrCard: {
+    backgroundColor: Colors.background.elevated,
+    borderRadius: Radius.xl,
+    borderWidth: 1, borderColor: Colors.border.strong,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08, shadowRadius: 12, elevation: 5,
   },
-  radio: {
-    width: 22, height: 22, borderRadius: 11,
-    borderWidth: 2, borderColor: Colors.border.default,
+  qrTitle: { fontSize: 18, fontWeight: '800', color: Colors.text.primary, marginBottom: 4 },
+  qrSubtitle: { fontSize: 12, color: Colors.text.tertiary, textAlign: 'center', marginBottom: Spacing.xl, lineHeight: 18 },
+  qrBox: {
+    padding: Spacing.xl,
+    backgroundColor: '#fff',
+    borderRadius: Radius.lg,
+    borderWidth: 1, borderColor: Colors.border.default,
+    marginBottom: Spacing.lg,
+  },
+  noQrBox: { width: 190, height: 190, alignItems: 'center', justifyContent: 'center', gap: 12 },
+  noQrText: { fontSize: 13, color: Colors.text.tertiary, textAlign: 'center' },
+  refRow: { alignItems: 'center', gap: 4 },
+  refLabel: { fontSize: 11, color: Colors.text.tertiary },
+  refValue: { fontSize: 20, fontWeight: '800', color: Colors.brand.primary, letterSpacing: 3 },
+
+  infoCard: { padding: Spacing.xl, marginBottom: Spacing.lg },
+
+  infoRow: {
+    flexDirection: 'row-reverse',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  infoLeft: { flexDirection: 'row-reverse', alignItems: 'center', gap: 6 },
+  infoIconWrap: {
+    width: 22, height: 22, borderRadius: 6,
+    backgroundColor: Colors.brand.light,
+    borderWidth: 1, borderColor: Colors.brand.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  radioActive: { borderColor: Colors.brand.primary },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.brand.primary },
-  successIcon: { alignItems: 'center', marginBottom: Spacing.lg },
-  qrCard: { padding: Spacing.xl, alignItems: 'center', marginBottom: Spacing.xl },
-  qrWrapper: {
-    padding: Spacing.lg,
-    borderRadius: Radius.lg,
-    backgroundColor: Colors.background.secondary,
-    borderWidth: 1, borderColor: Colors.border.default,
+  infoLabel: { fontSize: 13, color: Colors.text.secondary, fontWeight: '500' },
+  infoValue: { fontSize: 13, fontWeight: '700', color: Colors.text.primary },
+
+  // Screenshot upload
+  uploadSection: { marginBottom: Spacing.lg },
+  uploadTitle: { fontSize: 16, fontWeight: '700', color: Colors.text.primary, textAlign: 'right', marginBottom: 4 },
+  uploadSubtitle: { fontSize: 12, color: Colors.text.secondary, textAlign: 'right', lineHeight: 18, marginBottom: Spacing.lg },
+  uploadBtn: {
+    height: 150,
+    borderRadius: Radius.xl,
+    borderWidth: 2,
+    borderColor: Colors.brand.border,
+    borderStyle: 'dashed',
+    backgroundColor: Colors.brand.light,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    gap: 8,
   },
-  actionRow: { flexDirection: 'row', gap: Spacing.md, marginTop: Spacing.xl, alignItems: 'center' },
+  uploadIcon: {
+    width: 52, height: 52, borderRadius: 26,
+    backgroundColor: '#fff',
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 1, borderColor: Colors.brand.border,
+  },
+  uploadBtnLabel: { fontSize: 14, fontWeight: '700', color: Colors.brand.primary },
+  uploadBtnHint: { fontSize: 11, color: Colors.text.tertiary },
+  previewImg: { width: '100%', height: '100%', resizeMode: 'cover' },
+  previewOverlay: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    flexDirection: 'row-reverse',
+    alignItems: 'center', justifyContent: 'center',
+    paddingVertical: 8, gap: 6,
+  },
+  previewOverlayText: { fontSize: 13, fontWeight: '600', color: '#fff' },
+
+  // Success
+  successCard: {
+    alignItems: 'center',
+    backgroundColor: Colors.background.elevated,
+    borderRadius: Radius.xl,
+    borderWidth: 1, borderColor: Colors.brand.border,
+    padding: Spacing.xl,
+    gap: Spacing.md,
+  },
+  successIcon: {
+    width: 80, height: 80, borderRadius: 40,
+    backgroundColor: Colors.brand.light,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: Spacing.sm,
+  },
+  successTitle: { fontSize: 18, fontWeight: '800', color: Colors.text.primary },
+  successDesc: { fontSize: 13, color: Colors.text.secondary, textAlign: 'center', lineHeight: 20 },
+  actionRow: { flexDirection: 'row-reverse', gap: Spacing.md, width: '100%', alignItems: 'center', marginTop: Spacing.sm },
   whatsappBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingHorizontal: Spacing.lg, paddingVertical: 14,
+    flexDirection: 'row-reverse', alignItems: 'center', gap: 6,
+    paddingHorizontal: Spacing.md, paddingVertical: 14,
     borderRadius: Radius.lg, borderWidth: 1.5,
     borderColor: '#25D366' + '55',
     backgroundColor: '#25D36618',
   },
+  whatsappText: { fontSize: 13, fontWeight: '600', color: '#25D366' },
 });

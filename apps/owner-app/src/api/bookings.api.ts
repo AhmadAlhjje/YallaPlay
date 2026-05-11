@@ -10,6 +10,9 @@ export const bookingsApi = {
   confirmQr: (qrToken: string) =>
     apiClient.post<{ data: any }>('/bookings/confirm-qr', { qrToken }),
 
+  confirmManual: (id: string) =>
+    apiClient.patch<{ data: any }>(`/bookings/${id}/confirm-manual`),
+
   getById: (id: string) =>
     apiClient.get<{ data: any }>(`/bookings/${id}`),
 

@@ -5,6 +5,7 @@ import { Colors, Typography, Radius, Spacing } from '../theme';
 import type { SportType } from '@yallaplay/shared-types';
 
 const SPORT_INFO: Record<string, { label: string; emoji: string }> = {
+  all:        { label: 'الكل', emoji: '✨' },
   football:   { label: 'كرة قدم', emoji: '⚽' },
   basketball: { label: 'كرة سلة', emoji: '🏀' },
   tennis:     { label: 'تنس', emoji: '🎾' },
@@ -16,14 +17,18 @@ const SPORT_INFO: Record<string, { label: string; emoji: string }> = {
 };
 
 interface SportChipProps {
-  sport: SportType;
+  sport: SportType | 'all';
   selected?: boolean;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
+  labelOverride?: string;
+  emojiOverride?: string;
 }
 
-export function SportChip({ sport, selected = false, onPress, style }: SportChipProps) {
+export function SportChip({ sport, selected = false, onPress, style, labelOverride, emojiOverride }: SportChipProps) {
   const info = SPORT_INFO[sport] ?? { label: sport, emoji: '🏟️' };
+  const label = labelOverride ?? info.label;
+  const emoji = emojiOverride ?? info.emoji;
 
   return (
     <TouchableOpacity
@@ -31,8 +36,8 @@ export function SportChip({ sport, selected = false, onPress, style }: SportChip
       activeOpacity={0.75}
       style={[styles.chip, selected && styles.selected, style]}
     >
-      <Text style={styles.emoji}>{info.emoji}</Text>
-      <Text style={[styles.label, selected && styles.labelSelected]}>{info.label}</Text>
+      <Text style={styles.emoji}>{emoji}</Text>
+      <Text style={[styles.label, selected && styles.labelSelected]}>{label}</Text>
     </TouchableOpacity>
   );
 }
@@ -44,7 +49,6 @@ const styles = StyleSheet.create({
     borderRadius: Radius.full, borderWidth: 1.5,
     borderColor: Colors.border.default,
     backgroundColor: Colors.background.primary,
-    marginRight: Spacing.sm,
   },
   selected: { backgroundColor: Colors.brand.light, borderColor: Colors.brand.primary },
   emoji: { fontSize: 14 },

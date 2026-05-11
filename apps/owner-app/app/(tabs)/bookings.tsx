@@ -13,7 +13,7 @@ import { Colors, Typography, Spacing, Radius } from '../../src/theme';
 
 const STATUS_FILTERS = [
   { key: undefined,    label: 'الكل',    color: Colors.text.secondary },
-  { key: 'pending',    label: 'بانتظار تأكيد', color: Colors.warning },
+  { key: 'pending_payment',    label: 'بانتظار تأكيد', color: Colors.warning },
   { key: 'confirmed',  label: 'مؤكّد',   color: Colors.success },
   { key: 'completed',  label: 'مكتمل',   color: Colors.info },
   { key: 'cancelled',  label: 'ملغي',    color: Colors.error },
@@ -22,11 +22,11 @@ const STATUS_FILTERS = [
 type StatusKey = typeof STATUS_FILTERS[number]['key'];
 
 const STATUS_LABELS: Record<string, string> = {
-  pending: 'بانتظار تأكيد', confirmed: 'مؤكّد', completed: 'مكتمل',
+  pending_payment: 'بانتظار تأكيد', confirmed: 'مؤكّد', completed: 'مكتمل',
   cancelled: 'ملغي', no_show: 'لم يحضر',
 };
 const STATUS_COLORS: Record<string, string> = {
-  pending: Colors.warning, confirmed: Colors.success,
+  pending_payment: Colors.warning, confirmed: Colors.success,
   completed: Colors.info, cancelled: Colors.error, no_show: Colors.text.tertiary,
 };
 
@@ -70,6 +70,16 @@ export default function OwnerBookingsTab() {
       qc.invalidateQueries({ queryKey: ['pending-bookings'] });
     },
     onError: (err: any) => Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر الإلغاء'),
+  });
+
+  const confirmMutation = useMutation({
+    mutationFn: (id: string) => bookingsApi.confirmManual(id),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      qc.invalidateQueries({ queryKey: ['owner-bookings'] });
+      qc.invalidateQueries({ queryKey: ['pending-bookings'] });
+    },
+    onError: (err: any) => Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر التأكيد'),
   });
 
   const bookings: any[] = data?.data?.data?.bookings ?? [];
@@ -173,6 +183,7 @@ export default function OwnerBookingsTab() {
               booking={item}
               onCancel={() => confirmCancel(item._id, item.user?.name ?? 'اللاعب')}
               onScanConfirm={() => router.push('/(tabs)/scanner')}
+              onConfirm={() => confirmMutation.mutate(item._id)}
             />
           )}
         />
@@ -182,11 +193,11 @@ export default function OwnerBookingsTab() {
 }
 
 function BookingCard({
-  booking, onCancel, onScanConfirm,
-}: { booking: any; onCancel: () => void; onScanConfirm: () => void }) {
+  booking, onCancel, onScanConfirm, onConfirm,
+}: { booking: any; onCancel: () => void; onScanConfirm: () => void; onConfirm: () => void }) {
   const statusColor = STATUS_COLORS[booking.status] ?? Colors.text.secondary;
   const ref = (booking.bookingRef ?? booking._id.slice(-8)).toUpperCase();
-  const isPending = booking.status === 'pending';
+  const isPending = booking.status === 'pending_payment';
 
   return (
     <GlassCard style={[styles.card, isPending && { borderLeftColor: Colors.warning, borderLeftWidth: 4 }]}>
@@ -223,6 +234,9 @@ function BookingCard({
       {/* Actions for pending */}
       {isPending && (
         <View style={[styles.cardRow, { marginTop: Spacing.md, gap: Spacing.sm }]}>
+          <TouchableOpacity onPress={onConfirm} style={styles.confirmBtnPrimary}>
+            <Text style={[Typography.labelMd, { color: Colors.brand.primary }]}>تأكيد الدفع</Text>
+          </TouchableOpacity>
           <TouchableOpacity onPress={onScanConfirm} style={styles.confirmBtn}>
             <Text style={[Typography.labelMd, { color: Colors.success }]}>📱 تأكيد برمز QR</Text>
           </TouchableOpacity>
@@ -287,6 +301,11 @@ const styles = StyleSheet.create({
     flex: 1, alignItems: 'center', paddingVertical: 10,
     borderRadius: Radius.md, borderWidth: 1.5,
     borderColor: Colors.success + '55', backgroundColor: Colors.successBg,
+  },
+  confirmBtnPrimary: {
+    flex: 1, alignItems: 'center', paddingVertical: 10,
+    borderRadius: Radius.md, borderWidth: 1.5,
+    borderColor: Colors.brand.primary + '55', backgroundColor: Colors.brand.light,
   },
   cancelBtn: {
     flex: 1, alignItems: 'center', paddingVertical: 10,

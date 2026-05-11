@@ -23,8 +23,8 @@ interface AuthState {
 
   // Actions
   initialize: () => Promise<void>;
-  register: (name: string, phone: string, password: string, skillLevel?: string, preferredSports?: string[]) => Promise<void>;
-  login: (phone: string, password: string) => Promise<void>;
+  register: (name: string, phone: string, password: string, skillLevel?: string, preferredSports?: string[]) => Promise<{ requiresOtp: boolean }>;
+  login: (phone: string, password: string) => Promise<{ requiresOtp: boolean }>;
   sendOtp: (phone: string) => Promise<void>;
   verifyOtp: (phone: string, otp: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -59,16 +59,25 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   register: async (name, phone, password, skillLevel, preferredSports) => {
     const { data } = await authApi.register({ name, phone, password, skillLevel, preferredSports });
-    const { accessToken, refreshToken, user, isNewUser } = data.data;
-    await saveTokens(accessToken, refreshToken);
-    set({ user, isAuthenticated: true, isNewUser: !!isNewUser });
+    const { isNewUser } = data.data;
+    await clearTokens();
+    set({ user: null, isAuthenticated: false, isNewUser: !!isNewUser });
+    return { requiresOtp: true };
   },
 
   login: async (phone, password) => {
     const { data } = await authApi.login({ phone, password });
     const { accessToken, refreshToken, user, isNewUser } = data.data;
+
+    if (isNewUser) {
+      await clearTokens();
+      set({ user: null, isAuthenticated: false, isNewUser: true });
+      return { requiresOtp: true };
+    }
+
     await saveTokens(accessToken, refreshToken);
-    set({ user, isAuthenticated: true, isNewUser: !!isNewUser });
+    set({ user, isAuthenticated: true, isNewUser: false });
+    return { requiresOtp: false };
   },
 
   sendOtp: async (phone: string) => {

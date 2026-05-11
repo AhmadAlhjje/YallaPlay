@@ -12,6 +12,7 @@ export const BookingSchema = z.object({
   status: z.enum(BookingStatus).default('pending_payment'),
   paymentMethod: z.enum(PaymentMethod),
   paymentStatus: z.enum(PaymentStatus).default('unpaid'),
+  paymentSubmittedAt: z.date().optional(),
   totalPrice: z.number().positive(),
   discountApplied: z.number().min(0).default(0),
   qrToken: z.string().optional(),
