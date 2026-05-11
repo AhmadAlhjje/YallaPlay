@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert,
   KeyboardAvoidingView, Platform, Linking, Image as RNImage,
@@ -31,6 +31,7 @@ export default function NewBookingScreen() {
   const [bookingRef, setBookingRef] = useState<string | null>(null);
   const [screenshot, setScreenshot] = useState<string | null>(null);
   const [submitted, setSubmitted]   = useState(false);
+  const screenshotB64 = useRef<string | null>(null);
 
   const totalPrice = parseFloat(price ?? '0');
 
@@ -72,6 +73,7 @@ export default function NewBookingScreen() {
     }
   };
 
+
   const pickScreenshot = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
@@ -87,19 +89,17 @@ export default function NewBookingScreen() {
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
       setScreenshot(asset.uri);
-      // store base64 for upload (with data URI prefix stripped)
-      (pickScreenshot as any)._b64 = asset.base64 ?? null;
+      screenshotB64.current = asset.base64 ?? null;
     }
   };
-  // attach base64 storage to the function reference
-  (pickScreenshot as any)._b64 = null;
 
   const handleSubmitPayment = async () => {
     if (!bookingId) return;
     setLoading(true);
     try {
-      const b64: string | null = (pickScreenshot as any)._b64;
-      const screenshotData = b64 ? `data:image/jpeg;base64,${b64}` : undefined;
+      const screenshotData = screenshotB64.current
+        ? `data:image/jpeg;base64,${screenshotB64.current}`
+        : undefined;
       await bookingsApi.markPaymentSubmitted(bookingId, screenshotData);
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setSubmitted(true);
@@ -221,7 +221,7 @@ export default function NewBookingScreen() {
                   </View>
                 </GlassCard>
 
-                {/* Screenshot upload */}
+                {/* Screenshot upload — shown until payment is submitted */}
                 {!submitted && (
                   <View style={styles.uploadSection}>
                     <Text style={styles.uploadTitle}>ارفع إشعار الدفع</Text>
@@ -253,13 +253,12 @@ export default function NewBookingScreen() {
                       label={loading ? 'جاري الإرسال...' : 'إرسال إشعار الدفع'}
                       onPress={handleSubmitPayment}
                       loading={loading}
-                      disabled={!shamCashQr && !screenshot}
                       style={{ marginTop: Spacing.lg }}
                     />
                   </View>
                 )}
 
-                {/* Success state */}
+                {/* Success state — shown after payment notification is sent */}
                 {submitted && (
                   <View style={styles.successCard}>
                     <View style={styles.successIcon}>

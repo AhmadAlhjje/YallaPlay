@@ -175,17 +175,18 @@ export class BookingsService {
 
     await this.bookingModel.updateOne({ _id: bookingId }, { $set: updateData });
 
-    const user = await this.userModel.findById(userId).select('name phone').lean();
-
-    await this.notificationQueue.add('payment_submitted', {
-      ownerId: facility.ownerId.toString(),
-      bookingId,
-      facilityName: facility.name,
-      date: booking.date,
-      startTime: booking.startTime,
-      userName: user?.name ?? 'لاعب',
-      userPhone: user?.phone ?? '—',
-    });
+    // Fire-and-forget: don't block the response on queue availability
+    this.userModel.findById(userId).select('name phone').lean().then((user) => {
+      this.notificationQueue.add('payment_submitted', {
+        ownerId: facility.ownerId.toString(),
+        bookingId,
+        facilityName: facility.name,
+        date: booking.date,
+        startTime: booking.startTime,
+        userName: (user as any)?.name ?? 'لاعب',
+        userPhone: (user as any)?.phone ?? '—',
+      }).catch((err) => this.logger.warn(`notification queue error: ${err?.message}`));
+    }).catch((err) => this.logger.warn(`user fetch error: ${err?.message}`));
   }
 
   // ─── Owner: Manual confirm ───────────────────────────────────────────────
@@ -253,30 +254,19 @@ export class BookingsService {
       );
     }
 
-    // Notify the other party
-    if (isOwner) {
-      await this.notificationQueue.add('booking_cancelled_by_owner', {
-        userId: booking.userId.toString(),
-        bookingId,
-        facilityName: facility.name,
-        date: booking.date,
-        startTime: booking.startTime,
-      });
-    } else {
-      await this.notificationQueue.add('booking_cancelled_by_user', {
-        ownerId: facility.ownerId.toString(),
-        bookingId,
-        date: booking.date,
-        startTime: booking.startTime,
-      });
-    }
+    // Fire-and-forget notifications
+    const notifyPayload = isOwner
+      ? { event: 'booking_cancelled_by_owner', data: { userId: booking.userId.toString(), bookingId, facilityName: facility.name, date: booking.date, startTime: booking.startTime } }
+      : { event: 'booking_cancelled_by_user', data: { ownerId: facility.ownerId.toString(), bookingId, date: booking.date, startTime: booking.startTime } };
 
-    // Trigger waitlist processing for this newly freed slot
-    await this.waitlistQueue.add('slot_freed', {
+    this.notificationQueue.add(notifyPayload.event, notifyPayload.data)
+      .catch((err) => this.logger.warn(`notification queue error: ${err?.message}`));
+
+    this.waitlistQueue.add('slot_freed', {
       facilityId: booking.facilityId.toString(),
       date: booking.date,
       startTime: booking.startTime,
-    });
+    }).catch((err) => this.logger.warn(`waitlist queue error: ${err?.message}`));
 
     return this.bookingModel.findById(bookingId).lean() as unknown as BookingDocument;
   }
@@ -418,13 +408,13 @@ export class BookingsService {
 
     await this.facilitiesService.incrementBookingCount(facility._id.toString());
 
-    await this.notificationQueue.add('booking_confirmed', {
+    this.notificationQueue.add('booking_confirmed', {
       userId: booking.userId.toString(),
       bookingId,
       facilityName: facility.name,
       date: booking.date,
       startTime: booking.startTime,
-    });
+    }).catch((err) => this.logger.warn(`notification queue error: ${err?.message}`));
 
     return updated as BookingDocument;
   }

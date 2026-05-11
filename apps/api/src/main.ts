@@ -10,6 +10,10 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log', 'debug'],
   });
 
+  // Allow larger payloads for base64 screenshot uploads (max ~5MB)
+  app.use(require('express').json({ limit: '5mb' }));
+  app.use(require('express').urlencoded({ extended: true, limit: '5mb' }));
+
   // Global prefix
   app.setGlobalPrefix('api/v1');
 
