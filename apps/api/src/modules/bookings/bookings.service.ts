@@ -235,6 +235,15 @@ export class BookingsService {
       throw new BadRequestException('لا يمكن إلغاء هذا الحجز.');
     }
 
+    // Confirmed bookings: cannot cancel within 2 hours of start time
+    if (booking.status === 'confirmed') {
+      const bookingStart = new Date(`${booking.date}T${booking.startTime}:00`);
+      const diffMs = bookingStart.getTime() - Date.now();
+      if (diffMs < 2 * 60 * 60 * 1000) {
+        throw new BadRequestException('لا يمكن إلغاء الحجز قبل أقل من ساعتين من موعده.');
+      }
+    }
+
     await this.bookingModel.updateOne(
       { _id: bookingId },
       {

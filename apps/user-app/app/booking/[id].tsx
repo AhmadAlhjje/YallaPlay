@@ -40,7 +40,8 @@ export default function BookingDetailScreen() {
   const { data, isLoading } = useQuery({
     queryKey: ['booking', id],
     queryFn: () => bookingsApi.getById(id),
-    staleTime: 30_000,
+    staleTime: 0,
+    refetchOnMount: 'always',
   });
 
   const cancelMutation = useMutation({
@@ -71,8 +72,16 @@ export default function BookingDetailScreen() {
   }
 
   const status = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending;
-  const canCancel = ['pending', 'pending_payment', 'confirmed'].includes(booking.status);
   const ref = booking.bookingRef ?? booking._id.slice(-8).toUpperCase();
+
+  const hoursUntilBooking = (() => {
+    if (!booking.startTime || !booking.date) return Infinity;
+    const start = new Date(`${booking.date}T${booking.startTime}:00`);
+    return (start.getTime() - Date.now()) / (1000 * 60 * 60);
+  })();
+  const canCancel = ['pending', 'pending_payment'].includes(booking.status) ||
+    (booking.status === 'confirmed' && hoursUntilBooking >= 2);
+  const tooLateToCancel = booking.status === 'confirmed' && hoursUntilBooking < 2 && hoursUntilBooking > 0;
 
   const handleShareWhatsapp = () => {
     shareMutation.mutate();
@@ -166,6 +175,14 @@ export default function BookingDetailScreen() {
                 <Text style={[Typography.labelMd, { color: Colors.error }]}>إلغاء الحجز</Text>
               </TouchableOpacity>
             )}
+            {tooLateToCancel && (
+              <View style={styles.lockedCancelBtn}>
+                <Ionicons name="lock-closed-outline" size={14} color={Colors.text.tertiary} />
+                <Text style={[Typography.labelMd, { color: Colors.text.tertiary }]}>
+                  انتهت مهلة الإلغاء
+                </Text>
+              </View>
+            )}
           </View>
 
           <View style={{ height: 60 }} />
@@ -181,12 +198,19 @@ export default function BookingDetailScreen() {
               إلغاء الحجز
             </Text>
             {booking.status === 'confirmed' ? (
-              <View style={styles.cancelWarning}>
-                <Ionicons name="warning-outline" size={18} color={Colors.warning} />
-                <Text style={[Typography.bodyMd, { color: Colors.warning, flex: 1 }]}>
-                  ستفقد مبلغ الحجز بشكل نهائي، لكن ستحتفظ بنقطة واحدة تعويضاً
-                </Text>
-              </View>
+              <>
+                <View style={styles.cancelWarning}>
+                  <Ionicons name="warning-outline" size={18} color={Colors.warning} />
+                  <Text style={[Typography.bodyMd, { color: Colors.warning, flex: 1 }]}>
+                    ستفقد مبلغ الحجز بشكل نهائي، لكن ستحتفظ بنقطة واحدة تعويضاً
+                  </Text>
+                </View>
+                {hoursUntilBooking > 0 && hoursUntilBooking < 48 && (
+                  <Text style={[Typography.bodySm, { color: Colors.text.tertiary, textAlign: 'right', marginBottom: Spacing.lg }]}>
+                    الوقت المتبقي: {Math.floor(hoursUntilBooking)}س {Math.floor((hoursUntilBooking % 1) * 60)}د
+                  </Text>
+                )}
+              </>
             ) : (
               <Text style={[Typography.bodyMd, { color: Colors.text.secondary, marginBottom: Spacing.xl }]}>
                 سيتم إلغاء الحجز. اختر سبب الإلغاء:
@@ -307,6 +331,12 @@ const styles = StyleSheet.create({
   cancelWarning: {
     flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
     backgroundColor: Colors.warningBg, borderRadius: Radius.md,
-    padding: Spacing.md, marginBottom: Spacing.xl,
+    padding: Spacing.md, marginBottom: Spacing.sm,
+  },
+  lockedCancelBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    paddingVertical: 14, borderRadius: Radius.lg,
+    borderWidth: 1.5, borderColor: Colors.border.default,
+    backgroundColor: Colors.background.secondary,
   },
 });

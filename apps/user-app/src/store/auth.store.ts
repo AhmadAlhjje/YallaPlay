@@ -59,9 +59,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   register: async (name, phone, password, skillLevel, preferredSports) => {
     const { data } = await authApi.register({ name, phone, password, skillLevel, preferredSports });
-    const { isNewUser } = data.data;
+    const response = data.data as any;
+
+    if (response.accessToken && response.refreshToken) {
+      await saveTokens(response.accessToken, response.refreshToken);
+      set({ user: response.user, isAuthenticated: true, isNewUser: false });
+      return { requiresOtp: false };
+    }
+
     await clearTokens();
-    set({ user: null, isAuthenticated: false, isNewUser: !!isNewUser });
+    set({ user: null, isAuthenticated: false, isNewUser: true });
     return { requiresOtp: true };
   },
 

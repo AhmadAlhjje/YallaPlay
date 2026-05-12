@@ -17,13 +17,14 @@ function TabIcon({
   focused: boolean;
 }) {
   return (
-    <View style={[styles.tabIcon, focused && styles.tabIconFocused]}>
-      {focused && <View style={styles.activePill} />}
-      <Ionicons
-        name={focused ? iconFocused : icon}
-        size={focused ? 23 : 21}
-        color={focused ? Colors.brand.primary : Colors.text.tertiary}
-      />
+    <View style={[styles.tabItem, focused && styles.tabItemFocused]}>
+      {focused ? (
+        <View style={styles.activeWrapper}>
+          <Ionicons name={iconFocused} size={20} color="#fff" />
+        </View>
+      ) : (
+        <Ionicons name={icon} size={21} color={Colors.text.tertiary} />
+      )}
       <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>
         {label}
       </Text>
@@ -42,7 +43,7 @@ export default function TabsLayout() {
         tabBarStyle: styles.tabBar,
         tabBarBackground: () =>
           Platform.OS === 'ios' ? (
-            <BlurView intensity={60} tint="dark" style={StyleSheet.absoluteFill} />
+            <BlurView intensity={80} tint="dark" style={[StyleSheet.absoluteFill, styles.blurContainer]} />
           ) : (
             <View style={[StyleSheet.absoluteFill, styles.tabBarBg]} />
           ),
@@ -99,46 +100,56 @@ export default function TabsLayout() {
   );
 }
 
-const BAR_H = Platform.OS === 'ios' ? 78 : 64;
+const BAR_H = Platform.OS === 'ios' ? 76 : 62;
 
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 24 : 16,
-    left: 20,
-    right: 20,
+    bottom: Platform.OS === 'ios' ? 28 : 16,
+    left: 16,
+    right: 16,
     height: BAR_H,
-    borderRadius: 28,
+    borderRadius: 32,
     borderTopWidth: 0,
     backgroundColor: 'transparent',
     elevation: 0,
-    shadowColor: '#000',
+    shadowColor: Colors.brand.primary,
     shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.22,
-    shadowRadius: 20,
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+  },
+  blurContainer: {
+    borderRadius: 32,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   tabBarBg: {
-    borderRadius: 28,
+    borderRadius: 32,
     backgroundColor: Colors.background.elevated,
     borderWidth: 1,
     borderColor: Colors.border.strong,
   },
-  tabIcon: {
+  tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
     gap: 3,
-    paddingTop: 4,
+    paddingTop: 2,
+    minWidth: 52,
   },
-  tabIconFocused: {
-    transform: [{ translateY: -2 }],
-  },
-  activePill: {
-    position: 'absolute',
-    top: -8,
-    width: 28,
-    height: 3,
-    borderRadius: 2,
+  tabItemFocused: {},
+  activeWrapper: {
+    width: 40,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: Colors.brand.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.brand.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
   },
   tabLabel: {
     fontSize: 10,

@@ -1,8 +1,27 @@
 import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
+import Constants from 'expo-constants';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL;
+function resolveBaseUrl(): string {
+  const envUrl = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000/api/v1';
+  if (Platform.OS === 'web') return envUrl;
+  // In dev: auto-detect machine IP from the Expo bundler host
+  if (__DEV__) {
+    const c = Constants as any;
+    const hostUri: string | undefined =
+      c.expoConfig?.hostUri ??
+      c.manifest?.debuggerHost ??
+      c.manifest2?.extra?.expoGo?.debuggerHost;
+    if (hostUri) {
+      const host = hostUri.split(':')[0];
+      return `http://${host}:3000/api/v1`;
+    }
+  }
+  return envUrl;
+}
+
+const BASE_URL = resolveBaseUrl();
 
 const SECURE_KEYS = {
   accessToken:  'yp_access_token',

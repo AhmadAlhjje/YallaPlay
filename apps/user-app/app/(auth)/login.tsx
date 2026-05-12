@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useAuthStore } from '../../src/store/auth.store';
 import { Colors, Spacing, Radius } from '../../src/theme';
 
@@ -82,9 +83,9 @@ export default function LoginScreen() {
           {/* Password */}
           <View style={styles.fieldGroup}>
             <Text style={styles.label}>كلمة المرور</Text>
-            <View style={styles.passwordRow}>
+            <View style={styles.passwordWrap}>
               <TextInput
-                style={[styles.input, styles.passwordInput]}
+                style={styles.passwordInput}
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPass}
@@ -96,7 +97,7 @@ export default function LoginScreen() {
                 onSubmitEditing={handleLogin}
               />
               <TouchableOpacity onPress={() => setShowPass(!showPass)} style={styles.eyeBtn}>
-                <Text style={styles.eyeIcon}>{showPass ? '🙈' : '👁️'}</Text>
+                <Ionicons name={showPass ? 'eye-off-outline' : 'eye-outline'} size={20} color={Colors.text.tertiary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -174,16 +175,28 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.brand.light,
   },
 
-  passwordRow: { flexDirection: 'row', alignItems: 'center' },
-  passwordInput: { flex: 1 },
-  eyeBtn: {
-    position: 'absolute',
-    left: Spacing.md,
+  passwordWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
     height: 52,
-    justifyContent: 'center',
-    paddingHorizontal: 4,
+    borderWidth: 1.5,
+    borderColor: Colors.border.default,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.background.secondary,
+    paddingHorizontal: Spacing.lg,
+    gap: Spacing.sm,
   },
-  eyeIcon: { fontSize: 18 },
+  passwordInput: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.text.primary,
+    height: 52,
+  },
+  eyeBtn: {
+    padding: 4,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
 
   submitBtn: {
     backgroundColor: Colors.brand.primary,

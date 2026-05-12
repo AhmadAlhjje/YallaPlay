@@ -59,11 +59,12 @@ export default function RootLayout() {
               screenOptions={{
                 headerShown: false,
                 contentStyle: { backgroundColor: Colors.background.primary },
-                animation: Platform.OS === 'web' ? 'none' : undefined,
+                animation: Platform.OS === 'web' ? 'none' : 'ios',
+                animationDuration: Platform.OS === 'android' ? 280 : undefined,
               }}
             >
-              <Stack.Screen name="(auth)" />
-              <Stack.Screen name="(tabs)" />
+              <Stack.Screen name="(auth)" options={{ animation: Platform.OS === 'web' ? 'none' : 'fade' }} />
+              <Stack.Screen name="(tabs)" options={{ animation: 'none' }} />
               <Stack.Screen name="facility/[id]" options={{ animation: Platform.OS === 'web' ? 'none' : 'slide_from_right' }} />
               <Stack.Screen name="booking/[id]" options={{ animation: Platform.OS === 'web' ? 'none' : 'slide_from_bottom', presentation: Platform.OS === 'web' ? undefined : 'modal' }} />
               <Stack.Screen name="booking/new" options={{ animation: Platform.OS === 'web' ? 'none' : 'slide_from_bottom', presentation: Platform.OS === 'web' ? undefined : 'modal' }} />

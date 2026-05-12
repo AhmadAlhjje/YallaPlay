@@ -25,6 +25,13 @@ export interface DayForecast {
   icon: string;
 }
 
+export interface HourlyEntry {
+  time: string;
+  temp: number;
+  description: string;
+  icon: string;
+}
+
 const CACHE_TTL_SECONDS = 3600; // 1 hour
 
 @Injectable()
@@ -114,6 +121,52 @@ export class WeatherService {
   async getWeeklyForecast(latitude: number, longitude: number): Promise<DayForecast[]> {
     const weather = await this.getCurrentWeather(latitude, longitude);
     return weather.forecast;
+  }
+
+  async getHourlyForecast(latitude: number, longitude: number): Promise<HourlyEntry[]> {
+    const cacheKey = `weather:hourly:${latitude.toFixed(2)}:${longitude.toFixed(2)}`;
+    const cached = await this.getFromCache(cacheKey);
+    if (cached) return cached as unknown as HourlyEntry[];
+
+    const apiKey = this.config.get('WEATHER_API_KEY');
+    if (!apiKey) return this.getMockHourly();
+
+    const baseUrl = this.config.get('WEATHER_API_URL');
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const res = await axios.get(`${baseUrl}/forecast`, {
+        params: { lat: latitude, lon: longitude, appid: apiKey, units: 'metric', lang: 'ar', cnt: 9 },
+        timeout: 5000,
+      });
+
+      const hourly: HourlyEntry[] = res.data.list
+        .filter((item: any) => item.dt_txt.startsWith(today))
+        .map((item: any) => ({
+          time: item.dt_txt.split(' ')[1].slice(0, 5),
+          temp: Math.round(item.main.temp),
+          description: item.weather[0].description,
+          icon: item.weather[0].icon,
+        }));
+
+      await this.setCache(cacheKey, hourly as any);
+      return hourly;
+    } catch (error: any) {
+      this.logger.error('Hourly weather error:', error.message);
+      return this.getMockHourly();
+    }
+  }
+
+  private getMockHourly(): HourlyEntry[] {
+    const now = new Date();
+    return Array.from({ length: 8 }, (_, i) => {
+      const h = (now.getHours() + i) % 24;
+      return {
+        time: `${String(h).padStart(2, '0')}:00`,
+        temp: 28 + Math.round(Math.sin(i * 0.5) * 4),
+        description: i < 3 ? 'صافٍ' : i < 6 ? 'غائم جزئياً' : 'صافٍ',
+        icon: i < 12 ? '01d' : '01n',
+      };
+    });
   }
 
   private parseForecast(list: any[]): DayForecast[] {

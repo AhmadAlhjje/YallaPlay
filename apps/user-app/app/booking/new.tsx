@@ -95,6 +95,10 @@ export default function NewBookingScreen() {
 
   const handleSubmitPayment = async () => {
     if (!bookingId) return;
+    if (!screenshotB64.current) {
+      Alert.alert('مطلوب', 'يرجى رفع صورة إشعار الدفع قبل الإرسال');
+      return;
+    }
     setLoading(true);
     try {
       const screenshotData = screenshotB64.current
