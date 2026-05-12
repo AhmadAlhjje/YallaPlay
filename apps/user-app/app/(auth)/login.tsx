@@ -16,7 +16,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPass, setShowPass] = useState(false);
   const [loading, setLoading]   = useState(false);
-  const { login, sendOtp } = useAuthStore();
+  const { login } = useAuthStore();
 
   const isPhoneValid = /^\+963\d{9}$/.test(phone);
   const canSubmit    = isPhoneValid && password.length >= 6;
@@ -27,7 +27,6 @@ export default function LoginScreen() {
     try {
       const { requiresOtp } = await login(phone, password);
       if (requiresOtp) {
-        await sendOtp(phone);
         router.replace({ pathname: '/(auth)/otp', params: { phone } });
       } else {
         router.replace('/(tabs)');

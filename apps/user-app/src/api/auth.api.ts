@@ -12,7 +12,7 @@ interface RegisterDto {
 
 export const authApi = {
   register: (dto: RegisterDto) =>
-    apiClient.post<{ data: AuthResponseDtoType & { isNewUser: boolean } }>('/auth/register', dto),
+    apiClient.post<{ data: { message: string } }>('/auth/register', dto),
 
   login: (dto: LoginDto) =>
     apiClient.post<{ data: AuthResponseDtoType & { isNewUser: boolean } }>('/auth/login', dto),

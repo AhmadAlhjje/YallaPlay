@@ -48,6 +48,9 @@ export class User {
   @Prop({ type: [{ type: MongooseSchema.Types.ObjectId, ref: 'Facility' }], default: [] })
   favorites: Types.ObjectId[];
 
+  @Prop({ type: Boolean, default: false })
+  isPhoneVerified: boolean;
+
   // Password auth
   @Prop({ select: false })
   passwordHash?: string;

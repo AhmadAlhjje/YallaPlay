@@ -23,6 +23,10 @@ function resolveBaseUrl(): string {
 
 const BASE_URL = resolveBaseUrl();
 
+if (__DEV__) {
+  console.log('[API] Base URL:', BASE_URL);
+}
+
 const SECURE_KEYS = {
   accessToken:  'yp_access_token',
   refreshToken: 'yp_refresh_token',

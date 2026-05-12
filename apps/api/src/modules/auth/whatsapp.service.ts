@@ -11,6 +11,7 @@ import {
   fetchLatestBaileysVersion,
   makeWASocket,
   useMultiFileAuthState,
+  Browsers,
   type WASocket,
 } from '@whiskeysockets/baileys';
 import qrcode from 'qrcode-terminal';
@@ -46,28 +47,40 @@ export class WhatsappService implements OnModuleInit, OnModuleDestroy {
         version,
         printQRInTerminal: false,
         logger: require('pino')({ level: 'silent' }) as any,
+        browser: Browsers.ubuntu('Chrome'),
+        keepAliveIntervalMs: 25_000,
+        connectTimeoutMs: 60_000,
+        defaultQueryTimeoutMs: 60_000,
+        markOnlineOnConnect: false,
+        syncFullHistory: false,
+        retryRequestDelayMs: 500,
       });
 
       this.socket.ev.on('creds.update', saveCreds);
 
       this.socket.ev.on('connection.update', ({ connection, lastDisconnect, qr }) => {
         if (qr) {
-          this.logger.warn('══════════════════════════════════════════');
-          this.logger.warn('  WhatsApp QR — امسح هذا الكود بهاتفك   ');
-          this.logger.warn('══════════════════════════════════════════');
+          this.logger.warn('══════════════════════════════════════════════════════');
+          this.logger.warn('  ⚠️  WhatsApp غير مرتبط — امسح هذا QR بهاتفك الآن  ');
+          this.logger.warn('══════════════════════════════════════════════════════');
           qrcode.generate(qr, { small: true });
+          this.logger.warn('══════════════════════════════════════════════════════');
         }
 
         if (connection === 'open') {
           this.isReady = true;
           this.reconnectAttempts = 0;
-          this.logger.log('✅ WhatsApp متصل وجاهز لإرسال الرسائل');
+          this.logger.log('══════════════════════════════════════════════════════');
+          this.logger.log('  ✅ WhatsApp متصل وجاهز لإرسال رسائل OTP             ');
+          this.logger.log('══════════════════════════════════════════════════════');
         }
 
         if (connection === 'close') {
           this.isReady = false;
-          const statusCode = (lastDisconnect as any)?.error?.output?.statusCode;
+          const err = (lastDisconnect as any)?.error;
+          const statusCode = err?.output?.statusCode ?? err?.output?.payload?.statusCode;
           const isLoggedOut = statusCode === DisconnectReason.loggedOut;
+          const isRestarting = statusCode === DisconnectReason.restartRequired;
 
           if (isLoggedOut) {
             this.logger.error('WhatsApp: تم تسجيل الخروج. احذف مجلد .wa_session وأعد تشغيل الخادم لمسح QR جديد.');
@@ -76,11 +89,13 @@ export class WhatsappService implements OnModuleInit, OnModuleDestroy {
 
           if (this.reconnectAttempts < this.MAX_RECONNECTS) {
             this.reconnectAttempts++;
-            const delay = Math.min(1000 * 2 ** this.reconnectAttempts, 30_000);
-            this.logger.warn(`WhatsApp: انقطع الاتصال. إعادة المحاولة ${this.reconnectAttempts}/${this.MAX_RECONNECTS} بعد ${delay}ms`);
+            // Shorter delay on restart-required to reconnect fast
+            const delay = isRestarting ? 1000 : Math.min(3000 * this.reconnectAttempts, 30_000);
+            this.logger.warn(`WhatsApp: انقطع الاتصال (${statusCode ?? 'unknown'}). إعادة المحاولة ${this.reconnectAttempts}/${this.MAX_RECONNECTS} بعد ${delay}ms`);
             setTimeout(() => void this.connect(), delay);
           } else {
-            this.logger.error('WhatsApp: فشلت جميع محاولات إعادة الاتصال. أعد تشغيل الخادم.');
+            this.logger.error('WhatsApp: فشلت جميع محاولات إعادة الاتصال. احذف مجلد .wa_session وأعد تشغيل الخادم.');
+            this.reconnectAttempts = 0;
           }
         }
       });
@@ -92,7 +107,8 @@ export class WhatsappService implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy(): Promise<void> {
     try {
       this.isReady = false;
-      await this.socket?.logout();
+      // end() closes the connection without invalidating the session (logout() would delete credentials)
+      await this.socket?.end(undefined);
     } catch {
       // Best-effort shutdown
     }

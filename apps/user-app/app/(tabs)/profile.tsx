@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, ScrollView,
-  TextInput, Alert, KeyboardAvoidingView, Platform,
+  TextInput, Alert, KeyboardAvoidingView, Platform, Modal,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
+import { Ionicons } from '@expo/vector-icons';
 import { useMutation } from '@tanstack/react-query';
 import { useAuthStore } from '../../src/store/auth.store';
 import { usersApi } from '../../src/api/users.api';
@@ -39,6 +40,8 @@ export default function ProfileTab() {
   const { user, updateUser, logout } = useAuthStore();
 
   const [editMode, setEditMode]         = useState(false);
+  const [logoutOpen, setLogoutOpen]     = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
   const [name, setName]                 = useState(user?.name ?? '');
   const [skillLevel, setSkill]          = useState<SkillKey>((user?.skillLevel as SkillKey) ?? 'beginner');
   const [preferredSports, setSports]    = useState<SportKey[]>((user?.preferredSports ?? []) as SportKey[]);
@@ -57,7 +60,15 @@ export default function ProfileTab() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setEditMode(false);
     },
-    onError: () => Alert.alert('خطأ', 'تعذّر حفظ التغييرات'),
+    onError: async (err: any) => {
+      const status = err?.response?.status;
+      if (status === 404 || status === 401) {
+        await logout();
+        router.replace('/(auth)/welcome');
+      } else {
+        Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر حفظ التغييرات');
+      }
+    },
   });
 
   const openEdit = () => {
@@ -75,21 +86,19 @@ export default function ProfileTab() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'تسجيل الخروج',
-      'هل أنت متأكد من تسجيل الخروج؟',
-      [
-        { text: 'إلغاء', style: 'cancel' },
-        {
-          text: 'تسجيل الخروج',
-          style: 'destructive',
-          onPress: async () => {
-            await logout();
-            router.replace('/(auth)/welcome');
-          },
-        },
-      ],
-    );
+    setLogoutOpen(true);
+  };
+
+  const confirmLogout = async () => {
+    if (logoutLoading) return;
+    setLogoutLoading(true);
+    try {
+      await logout();
+      router.replace('/(auth)/welcome');
+    } finally {
+      setLogoutLoading(false);
+      setLogoutOpen(false);
+    }
   };
 
   const toggleSport = (key: SportKey) =>
@@ -252,6 +261,43 @@ export default function ProfileTab() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal
+        visible={logoutOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setLogoutOpen(false)}
+      >
+        <View style={styles.logoutBackdrop}>
+          <View style={styles.logoutCard}>
+            <View style={styles.logoutIconWrap}>
+              <Ionicons name="log-out" size={22} color={Colors.error} />
+            </View>
+            <Text style={styles.logoutTitle}>تسجيل الخروج</Text>
+            <Text style={styles.logoutDesc}>هل أنت متأكد من تسجيل الخروج؟</Text>
+
+            <View style={styles.logoutActions}>
+              <TouchableOpacity
+                style={styles.logoutCancelBtn}
+                onPress={() => setLogoutOpen(false)}
+                disabled={logoutLoading}
+              >
+                <Text style={styles.logoutCancelText}>إلغاء</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.logoutConfirmBtn}
+                onPress={confirmLogout}
+                disabled={logoutLoading}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.logoutConfirmText}>
+                  {logoutLoading ? 'جارٍ الخروج...' : 'تسجيل الخروج'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -465,4 +511,68 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF',
   },
   logoutText: { color: Colors.error, fontSize: 15, fontWeight: '700' },
+
+  // Logout modal
+  logoutBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(10,14,26,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.xl,
+  },
+  logoutCard: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#FFFFFF',
+    borderRadius: Radius.xl,
+    paddingVertical: Spacing.xl,
+    paddingHorizontal: Spacing.xl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 16,
+  },
+  logoutIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: 'rgba(239,68,68,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  logoutTitle: { fontSize: 16, fontWeight: '800', color: Colors.text.primary },
+  logoutDesc: { fontSize: 13, color: Colors.text.secondary, marginTop: 6, textAlign: 'center' },
+  logoutActions: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: Spacing.lg,
+    width: '100%',
+  },
+  logoutCancelBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.background.secondary,
+    borderWidth: 1,
+    borderColor: Colors.border.default,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutCancelText: { color: Colors.text.secondary, fontSize: 14, fontWeight: '600' },
+  logoutConfirmBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: Radius.lg,
+    backgroundColor: Colors.error,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoutConfirmText: { color: '#FFFFFF', fontSize: 14, fontWeight: '700' },
 });

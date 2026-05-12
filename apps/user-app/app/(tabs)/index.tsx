@@ -61,19 +61,28 @@ const BANNERS = [
 ];
 
 // ─── Animated section wrapper ─────────────────────────────────────────────────
+// opacity:0 causes content to silently disappear on Android (useNativeDriver bug)
+// → use translateY only, content always visible
 function FadeSlideIn({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) {
-  const opacity = useRef(new Animated.Value(0)).current;
-  const translateY = useRef(new Animated.Value(24)).current;
+  const translateY = useRef(new Animated.Value(14)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, { toValue: 1, duration: 400, delay, useNativeDriver: true }),
-      Animated.timing(translateY, { toValue: 0, duration: 400, delay, useNativeDriver: true }),
-    ]).start();
+    const start = () => {
+      Animated.timing(translateY, {
+        toValue: 0,
+        duration: 320,
+        useNativeDriver: true,
+      }).start();
+    };
+    if (delay > 0) {
+      const t = setTimeout(start, delay);
+      return () => clearTimeout(t);
+    }
+    start();
   }, []);
 
   return (
-    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+    <Animated.View style={{ transform: [{ translateY }] }}>
       {children}
     </Animated.View>
   );

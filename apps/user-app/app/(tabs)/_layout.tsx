@@ -1,7 +1,8 @@
 import { Tabs, Redirect } from 'expo-router';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
+import { useRef, useEffect } from 'react';
 import { useAuthStore } from '../../src/store/auth.store';
 import { Colors } from '../../src/theme';
 
@@ -16,15 +17,36 @@ function TabIcon({
   label: string;
   focused: boolean;
 }) {
+  const scale = useRef(new Animated.Value(1)).current;
+  const bgOpacity = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.spring(scale, {
+        toValue: focused ? 1.08 : 1,
+        useNativeDriver: true,
+        tension: 120,
+        friction: 8,
+      }),
+      Animated.timing(bgOpacity, {
+        toValue: focused ? 1 : 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [focused]);
+
   return (
-    <View style={[styles.tabItem, focused && styles.tabItemFocused]}>
-      {focused ? (
-        <View style={styles.activeWrapper}>
-          <Ionicons name={iconFocused} size={20} color="#fff" />
-        </View>
-      ) : (
-        <Ionicons name={icon} size={21} color={Colors.text.tertiary} />
-      )}
+    <View style={styles.tabItem}>
+      <Animated.View style={[styles.iconWrap, { transform: [{ scale }] }]}>
+        {/* Active background pill */}
+        <Animated.View style={[styles.activeBg, { opacity: bgOpacity }]} />
+        <Ionicons
+          name={focused ? iconFocused : icon}
+          size={22}
+          color={focused ? Colors.brand.primary : Colors.text.tertiary}
+        />
+      </Animated.View>
       <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>
         {label}
       </Text>
@@ -41,15 +63,15 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarBackground: () =>
-          Platform.OS === 'ios' ? (
-            <BlurView intensity={80} tint="dark" style={[StyleSheet.absoluteFill, styles.blurContainer]} />
-          ) : (
-            <View style={[StyleSheet.absoluteFill, styles.tabBarBg]} />
-          ),
+        tabBarBackground: () => (
+          <View style={[StyleSheet.absoluteFill, styles.barBg]}>
+            <View style={styles.topAccent} />
+          </View>
+        ),
         tabBarShowLabel: false,
         tabBarActiveTintColor: Colors.brand.primary,
         tabBarInactiveTintColor: Colors.text.tertiary,
+        tabBarItemStyle: styles.tabBarItem,
       }}
     >
       <Tabs.Screen
@@ -72,14 +94,11 @@ export default function TabsLayout() {
         name="nearby"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="location-outline" iconFocused="location" label="قريب منك" focused={focused} />
+            <TabIcon icon="location-outline" iconFocused="location" label="قريب" focused={focused} />
           ),
         }}
       />
-      <Tabs.Screen
-        name="waitlist"
-        options={{ href: null }}
-      />
+      <Tabs.Screen name="waitlist" options={{ href: null }} />
       <Tabs.Screen
         name="bookings"
         options={{
@@ -100,56 +119,73 @@ export default function TabsLayout() {
   );
 }
 
-const BAR_H = Platform.OS === 'ios' ? 76 : 62;
+const BAR_H = Platform.OS === 'ios' ? 76 : 64;
 
 const styles = StyleSheet.create({
   tabBar: {
     position: 'absolute',
-    bottom: Platform.OS === 'ios' ? 28 : 16,
-    left: 16,
-    right: 16,
+    bottom: Platform.OS === 'ios' ? 24 : 12,
+    left: 14,
+    right: 14,
     height: BAR_H,
-    borderRadius: 32,
+    borderRadius: 28,
     borderTopWidth: 0,
     backgroundColor: 'transparent',
+    paddingTop: 8,
+    paddingBottom: Platform.OS === 'ios' ? 10 : 8,
     elevation: 0,
-    shadowColor: Colors.brand.primary,
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.18,
-    shadowRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
   },
-  blurContainer: {
-    borderRadius: 32,
-    overflow: 'hidden',
+  barBg: {
+    borderRadius: 28,
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0,0,0,0.04)',
   },
-  tabBarBg: {
-    borderRadius: 32,
-    backgroundColor: Colors.background.elevated,
-    borderWidth: 1,
-    borderColor: Colors.border.strong,
+  topAccent: {
+    position: 'absolute',
+    top: 6,
+    left: 20,
+    right: 20,
+    height: 3,
+    borderRadius: 2,
+    backgroundColor: Colors.brand.primary,
+    opacity: 0.2,
+  },
+  tabBarItem: {
+    height: BAR_H,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 0,
   },
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
-    paddingTop: 2,
-    minWidth: 52,
+    gap: 4,
   },
-  tabItemFocused: {},
-  activeWrapper: {
-    width: 40,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: Colors.brand.primary,
+  iconWrap: {
+    width: 46,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: Colors.brand.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
+    position: 'relative',
+  },
+  activeBg: {
+    position: 'absolute',
+    width: 46,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.brand.light,
+    borderWidth: 1,
+    borderColor: Colors.brand.border,
   },
   tabLabel: {
     fontSize: 10,

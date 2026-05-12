@@ -76,7 +76,6 @@ export default function OtpScreen() {
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/(auth)/login'))}
           style={styles.back}
         >
-          {' '}
           <Text style={[Typography.bodyLg, { color: Colors.text.secondary }]}>← رجوع</Text>
         </TouchableOpacity>
 

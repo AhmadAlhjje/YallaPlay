@@ -47,26 +47,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return;
       }
 
-      // Token exists → fetch fresh profile
       const { data } = await usersApi.getMe();
       set({ user: data.data, isAuthenticated: true, isLoading: false });
-    } catch {
-      // Token invalid or expired and refresh also failed
+    } catch (err: any) {
+      // 404 = user deleted from DB; 401 = token invalid/expired
       await clearTokens();
       set({ user: null, isAuthenticated: false, isLoading: false });
     }
   },
 
   register: async (name, phone, password, skillLevel, preferredSports) => {
-    const { data } = await authApi.register({ name, phone, password, skillLevel, preferredSports });
-    const response = data.data as any;
-
-    if (response.accessToken && response.refreshToken) {
-      await saveTokens(response.accessToken, response.refreshToken);
-      set({ user: response.user, isAuthenticated: true, isNewUser: false });
-      return { requiresOtp: false };
-    }
-
+    await authApi.register({ name, phone, password, skillLevel, preferredSports });
     await clearTokens();
     set({ user: null, isAuthenticated: false, isNewUser: true });
     return { requiresOtp: true };
@@ -88,7 +79,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   sendOtp: async (phone: string) => {
-    await authApi.sendOtp({ phone, role: 'athlete' });
+    const res = await authApi.sendOtp({ phone, role: 'athlete' });
+    if (__DEV__) {
+      const msg = (res as any)?.data?.data?.message ?? '';
+      if (msg.startsWith('OTP:')) console.log('[DEV OTP]', msg);
+    }
   },
 
   verifyOtp: async (phone: string, otp: string) => {
@@ -110,12 +105,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
-    try {
-      await authApi.logout();
-    } catch {
-      // Best-effort — clear tokens regardless
-    }
     await clearTokens();
     set({ user: null, isAuthenticated: false, isNewUser: false });
+    // Best-effort — do not block UI if API is unreachable.
+    void authApi.logout().catch(() => undefined);
   },
 }));

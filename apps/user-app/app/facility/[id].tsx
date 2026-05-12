@@ -370,26 +370,30 @@ export default function FacilityDetailScreen() {
 
           {/* Date Picker */}
           <Text style={[Typography.h3, styles.sectionTitle]}>اختر التاريخ</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -Spacing.xl }}>
-            <View style={{ flexDirection: 'row', paddingHorizontal: Spacing.xl, gap: 10 }}>
-              {DATE_LIST.map((d) => {
-                const active = d.date === selectedDate;
-                return (
-                  <TouchableOpacity
-                    key={d.date}
-                    onPress={() => { setSelectedDate(d.date); setSelectedSlot(null); }}
-                    style={[styles.dateChip, active && styles.dateChipActive]}
-                  >
-                    <Text style={[Typography.labelSm, { color: active ? '#fff' : Colors.text.tertiary }]}>
-                      {d.dayName}
-                    </Text>
-                    <Text style={[Typography.numericSm, { color: active ? '#fff' : Colors.text.secondary }]}>
-                      {d.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            nestedScrollEnabled
+            style={{ marginHorizontal: -Spacing.xl }}
+            contentContainerStyle={{ paddingHorizontal: Spacing.xl, gap: 10, paddingVertical: 4 }}
+          >
+            {DATE_LIST.map((d) => {
+              const active = d.date === selectedDate;
+              return (
+                <TouchableOpacity
+                  key={d.date}
+                  onPress={() => { setSelectedDate(d.date); setSelectedSlot(null); }}
+                  style={[styles.dateChip, active && styles.dateChipActive]}
+                >
+                  <Text style={[Typography.labelSm, { color: active ? '#fff' : Colors.text.tertiary }]}>
+                    {d.dayName}
+                  </Text>
+                  <Text style={[Typography.numericSm, { color: active ? '#fff' : Colors.text.secondary }]}>
+                    {d.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
 
           {/* Slot Grid */}
@@ -410,7 +414,7 @@ export default function FacilityDetailScreen() {
                   slot={slot}
                   selected={selectedSlot?.startTime === slot.startTime}
                   onPress={() => setSelectedSlot((prev) => prev?.startTime === slot.startTime ? null : slot)}
-                  style={{ flex: 1, minWidth: '30%' }}
+                  style={styles.slotItem}
                 />
               ))}
             </View>
@@ -431,13 +435,13 @@ export default function FacilityDetailScreen() {
             ))}
           </View>
 
-          <View style={{ height: 120 }} />
+          <View style={{ height: 160 }} />
         </View>
       </ScrollView>
 
       {/* Bottom CTA */}
       {selectedSlot && (
-        <View style={[styles.bottomBar, { paddingBottom: insets.bottom + 12 }]}>
+        <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 8) + 8 }]}>
           <View style={styles.bottomContent}>
             <View>
               <Text style={[Typography.labelMd, { color: Colors.text.secondary }]}>
@@ -666,7 +670,12 @@ const styles = StyleSheet.create({
   slotGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 8,
+    marginTop: 4,
+  },
+  slotItem: {
+    width: '31%',
+    marginBottom: 0,
   },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
   bottomBar: {

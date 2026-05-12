@@ -28,57 +28,48 @@ export class AuthService {
     private whatsapp: WhatsappService,
   ) {}
 
-  async register(dto: RegisterDtoType): Promise<{
-    accessToken: string;
-    refreshToken: string;
-    user: Partial<UserDocument>;
-    isNewUser: boolean;
-  }> {
+  async register(dto: RegisterDtoType): Promise<{ message: string }> {
     const existing = await this.userModel
       .findOne({ phone: dto.phone })
-      .select('+passwordHash')
+      .select('+passwordHash +isPhoneVerified')
       .lean();
 
-    // Phone exists AND already has a password → must login instead
-    if (existing && existing.passwordHash) {
+    // Already verified account with this phone → must login
+    if (existing && existing.isPhoneVerified && existing.passwordHash) {
       throw new ConflictException('رقم الهاتف مسجل مسبقاً. يرجى تسجيل الدخول.');
     }
 
     const passwordHash = await bcrypt.hash(dto.password, this.BCRYPT_ROUNDS);
+    const otp = this.generateOtp();
+    const otpHash = await bcrypt.hash(otp, this.BCRYPT_ROUNDS);
+    const otpExpiresAt = new Date(Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000);
 
-    let savedUser: any;
-    if (existing) {
-      // Created via OTP before — just set their data and password
-      savedUser = await this.userModel.findOneAndUpdate(
-        { _id: existing._id },
-        {
-          $set: {
-            name: dto.name,
-            passwordHash,
-            skillLevel: dto.skillLevel ?? existing.skillLevel ?? 'beginner',
-            preferredSports: dto.preferredSports ?? existing.preferredSports ?? [],
-          },
-          $unset: { otpHash: 1, otpExpiresAt: 1 },
+    // Upsert a pending (unverified) user record with all registration data
+    await this.userModel.findOneAndUpdate(
+      { phone: dto.phone },
+      {
+        $set: {
+          name: dto.name,
+          passwordHash,
+          skillLevel: dto.skillLevel ?? 'beginner',
+          preferredSports: dto.preferredSports ?? [],
+          isPhoneVerified: false,
+          otpHash,
+          otpExpiresAt,
         },
-        { new: true },
-      );
-    } else {
-      savedUser = await this.userModel.create({
-        name: dto.name,
-        phone: dto.phone,
-        passwordHash,
-        skillLevel: dto.skillLevel ?? 'beginner',
-        preferredSports: dto.preferredSports ?? [],
-        role: dto.role ?? 'athlete',
-      });
-    }
+        $setOnInsert: {
+          phone: dto.phone,
+          role: dto.role ?? 'athlete',
+        },
+      },
+      { upsert: true, new: true },
+    );
 
-    const { accessToken, refreshToken } = await this.issueTokens(savedUser);
-    const refreshTokenHash = await bcrypt.hash(refreshToken, this.BCRYPT_ROUNDS);
-    await this.userModel.updateOne({ _id: savedUser._id }, { $set: { refreshTokenHash } });
+    await this.dispatchOtp(dto.phone, otp);
+    this.logger.log(`Registration OTP sent to ${dto.phone}`);
 
-    const { passwordHash: _ph, refreshTokenHash: _rth, ...safeUser } = savedUser.toObject ? savedUser.toObject() : { ...savedUser };
-    return { accessToken, refreshToken, user: safeUser, isNewUser: true };
+    const isDev = this.config.get('NODE_ENV') === 'development';
+    return { message: isDev ? `OTP: ${otp}` : 'تم إرسال رمز التحقق إلى هاتفك' };
   }
 
   async login(dto: LoginDtoType): Promise<{
@@ -89,7 +80,7 @@ export class AuthService {
   }> {
     const user = await this.userModel
       .findOne({ phone: dto.phone })
-      .select('+passwordHash')
+      .select('+passwordHash +isPhoneVerified')
       .lean();
 
     if (!user || !user.passwordHash) {
@@ -101,11 +92,23 @@ export class AuthService {
       throw new UnauthorizedException('رقم الهاتف أو كلمة المرور غير صحيحة.');
     }
 
+    // Account not yet phone-verified → resend OTP and ask to verify
+    if (!user.isPhoneVerified) {
+      const otp = this.generateOtp();
+      const otpHash = await bcrypt.hash(otp, this.BCRYPT_ROUNDS);
+      const otpExpiresAt = new Date(Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000);
+      await this.userModel.updateOne({ _id: user._id }, { $set: { otpHash, otpExpiresAt } });
+      await this.dispatchOtp(dto.phone, otp);
+      const isDev = this.config.get('NODE_ENV') === 'development';
+      this.logger.log(`Re-sent OTP to unverified user ${dto.phone}${isDev ? ` | OTP: ${otp}` : ''}`);
+      return { accessToken: '', refreshToken: '', user: {}, isNewUser: true };
+    }
+
     const { accessToken, refreshToken } = await this.issueTokens(user);
     const refreshTokenHash = await bcrypt.hash(refreshToken, this.BCRYPT_ROUNDS);
     await this.userModel.updateOne({ _id: user._id }, { $set: { refreshTokenHash } });
 
-    const { passwordHash: _ph, otpHash: _oh, otpExpiresAt: _oe, refreshTokenHash: _rth, ...safeUser } = user as any;
+    const { passwordHash: _ph, otpHash: _oh, otpExpiresAt: _oe, refreshTokenHash: _rth, isPhoneVerified: _ipv, ...safeUser } = user as any;
     return { accessToken, refreshToken, user: safeUser, isNewUser: false };
   }
 
@@ -160,13 +163,13 @@ export class AuthService {
 
     const { accessToken, refreshToken } = await this.issueTokens(user);
 
-    // Clear OTP, store refresh token hash
+    // Clear OTP, activate account, store refresh token hash
     const refreshTokenHash = await bcrypt.hash(refreshToken, this.BCRYPT_ROUNDS);
     await this.userModel.updateOne(
       { _id: user._id },
       {
         $unset: { otpHash: 1, otpExpiresAt: 1 },
-        $set: { refreshTokenHash },
+        $set: { refreshTokenHash, isPhoneVerified: true },
       },
     );
 
@@ -247,12 +250,16 @@ export class AuthService {
     if (provider === 'whatsapp') {
       try {
         await this.whatsapp.sendOtp(phone, otp);
+        this.logger.log(`✅ OTP sent via WhatsApp to ${phone}`);
         return;
       } catch (err) {
+        this.logger.error(`❌ WhatsApp failed for ${phone}: ${(err as any)?.message}`);
         if (isDev) {
-          // Fallback to console in dev so testing isn't blocked by WhatsApp connectivity
-          this.logger.warn(`[WhatsApp unavailable — DEV FALLBACK] Phone: ${phone} | OTP: ${otp}`);
-          this.logger.warn('تحقق من terminal الخادم لقراءة الـ OTP أو امسح QR لتفعيل WhatsApp.');
+          this.logger.warn(`══════════════════════════════════════`);
+          this.logger.warn(`  DEV FALLBACK — OTP for ${phone}`);
+          this.logger.warn(`  CODE: ${otp}`);
+          this.logger.warn(`══════════════════════════════════════`);
+          this.logger.warn(`  افتح WhatsApp وامسح QR أو تحقق من الاتصال`);
           return;
         }
         throw err;
