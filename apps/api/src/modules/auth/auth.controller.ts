@@ -66,9 +66,8 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Rotate refresh token' })
   @UsePipes(new ZodValidationPipe(RefreshTokenDto))
-  refresh(@Body() dto: { refreshToken: string }, @CurrentUser() user: JwtPayloadType) {
-    // Note: refresh endpoint uses a separate guard that validates the refresh token secret
-    return this.authService.refreshTokens(user.sub, dto.refreshToken);
+  refresh(@Body() dto: { refreshToken: string }) {
+    return this.authService.refreshTokens(dto.refreshToken);
   }
 
   @Post('logout')

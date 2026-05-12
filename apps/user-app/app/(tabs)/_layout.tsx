@@ -1,5 +1,5 @@
 import { Tabs, Redirect } from 'expo-router';
-import { View, Text, StyleSheet, Platform, Animated, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Platform, Animated } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRef, useEffect } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,72 +18,52 @@ function TabIcon({
   label: string;
   focused: boolean;
 }) {
-  const translateY = useRef(new Animated.Value(0)).current;
-  const dotScale   = useRef(new Animated.Value(0)).current;
+  const bgScale = useRef(new Animated.Value(focused ? 1 : 0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(translateY, {
-        toValue: focused ? -2 : 0,
-        useNativeDriver: true,
-        tension: 180,
-        friction: 10,
-      }),
-      Animated.spring(dotScale, {
-        toValue: focused ? 1 : 0,
-        useNativeDriver: true,
-        tension: 200,
-        friction: 12,
-      }),
-    ]).start();
+    Animated.spring(bgScale, {
+      toValue: focused ? 1 : 0,
+      useNativeDriver: true,
+      tension: 200,
+      friction: 14,
+    }).start();
   }, [focused]);
 
   return (
-    <Animated.View style={[styles.tabItem, { transform: [{ translateY }] }]}>
-      <Ionicons
-        name={focused ? iconFocused : icon}
-        size={23}
-        color={focused ? Colors.brand.primary : '#B0B8C1'}
-      />
-      <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>
-        {label}
-      </Text>
-      <Animated.View style={[styles.activeDot, { transform: [{ scale: dotScale }] }]} />
-    </Animated.View>
+    <View style={styles.tabItem}>
+      <Animated.View style={[styles.tabPill, { transform: [{ scaleX: bgScale }], opacity: bgScale }]} />
+      <View style={styles.tabRow}>
+        <Ionicons
+          name={focused ? iconFocused : icon}
+          size={20}
+          color={focused ? Colors.brand.primary : '#B0B8C1'}
+        />
+        {focused && (
+          <Text style={styles.tabLabel}>{label}</Text>
+        )}
+      </View>
+    </View>
   );
 }
 
 // ─── Center Home Button ───────────────────────────────────────────────────────
 function HomeIcon({ focused }: { focused: boolean }) {
   const scale = useRef(new Animated.Value(1)).current;
-  const ring  = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.spring(scale, {
-        toValue: focused ? 1.08 : 1,
-        useNativeDriver: true,
-        tension: 200,
-        friction: 10,
-      }),
-      Animated.timing(ring, {
-        toValue: focused ? 1 : 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    Animated.spring(scale, {
+      toValue: focused ? 1.05 : 1,
+      useNativeDriver: true,
+      tension: 200,
+      friction: 10,
+    }).start();
   }, [focused]);
 
   return (
     <View style={styles.homeWrap}>
-      <Animated.View style={[styles.homeBtn, { transform: [{ scale }] }]}>
-        {/* Outer ring when active */}
-        <Animated.View style={[styles.homeRing, { opacity: ring }]} />
-        <View style={[styles.homeBtnInner, focused && styles.homeBtnInnerActive]}>
-          <Ionicons name={focused ? 'home' : 'home-outline'} size={24} color="#fff" />
-        </View>
+      <Animated.View style={[styles.homeBtnInner, focused && styles.homeBtnInnerActive, { transform: [{ scale }] }]}>
+        <Ionicons name={focused ? 'home' : 'home-outline'} size={21} color="#fff" />
       </Animated.View>
-      <Text style={[styles.tabLabel, focused && styles.tabLabelFocused]}>الرئيسية</Text>
     </View>
   );
 }
@@ -95,7 +75,7 @@ export default function TabsLayout() {
 
   if (!isAuthenticated) return <Redirect href="/(auth)/welcome" />;
 
-  const BAR_H  = 62;
+  const BAR_H  = 58;
   const BOTTOM = Math.max(insets.bottom, Platform.OS === 'ios' ? 16 : 8);
 
   return (
@@ -134,31 +114,13 @@ export default function TabsLayout() {
         },
       }}
     >
-      {/* حجوزاتي */}
+      {/* حسابي */}
       <Tabs.Screen
-        name="bookings"
+        name="profile"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="calendar-outline" iconFocused="calendar" label="حجوزاتي" focused={focused} />
+            <TabIcon icon="person-outline" iconFocused="person" label="حسابي" focused={focused} />
           ),
-        }}
-      />
-
-      {/* المفضلة */}
-      <Tabs.Screen
-        name="favorites"
-        options={{
-          tabBarIcon: ({ focused }) => (
-            <TabIcon icon="heart-outline" iconFocused="heart" label="المفضلة" focused={focused} />
-          ),
-        }}
-      />
-
-      {/* الرئيسية — center elevated */}
-      <Tabs.Screen
-        name="index"
-        options={{
-          tabBarIcon: ({ focused }) => <HomeIcon focused={focused} />,
         }}
       />
 
@@ -172,12 +134,30 @@ export default function TabsLayout() {
         }}
       />
 
-      {/* حسابي */}
+      {/* الرئيسية — center elevated */}
       <Tabs.Screen
-        name="profile"
+        name="index"
+        options={{
+          tabBarIcon: ({ focused }) => <HomeIcon focused={focused} />,
+        }}
+      />
+
+      {/* المفضلة */}
+      <Tabs.Screen
+        name="favorites"
         options={{
           tabBarIcon: ({ focused }) => (
-            <TabIcon icon="person-outline" iconFocused="person" label="حسابي" focused={focused} />
+            <TabIcon icon="heart-outline" iconFocused="heart" label="المفضلة" focused={focused} />
+          ),
+        }}
+      />
+
+      {/* حجوزاتي */}
+      <Tabs.Screen
+        name="bookings"
+        options={{
+          tabBarIcon: ({ focused }) => (
+            <TabIcon icon="calendar-outline" iconFocused="calendar" label="حجوزاتي" focused={focused} />
           ),
         }}
       />
@@ -192,65 +172,53 @@ const styles = StyleSheet.create({
   tabItem: {
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 3,
-    paddingTop: 6,
+    position: 'relative',
+  },
+  tabPill: {
+    position: 'absolute',
+    width: '100%',
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.brand.light ?? '#E8F5E9',
+  },
+  tabRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
   },
   tabLabel: {
-    fontSize: 10,
-    fontWeight: '500',
-    color: '#B0B8C1',
-    letterSpacing: 0.1,
-  },
-  tabLabelFocused: {
-    color: Colors.brand.primary,
+    fontSize: 12,
     fontWeight: '700',
-  },
-  activeDot: {
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.brand.primary,
-    marginTop: 1,
+    color: Colors.brand.primary,
+    letterSpacing: 0.1,
   },
 
   // Home button
   homeWrap: {
     alignItems: 'center',
-    gap: 3,
-    paddingTop: 0,
-    marginTop: -18,
-  },
-  homeBtn: {
-    alignItems: 'center',
     justifyContent: 'center',
-  },
-  homeRing: {
-    position: 'absolute',
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    borderWidth: 2,
-    borderColor: Colors.brand.primary,
-    opacity: 0.25,
+    marginTop: -14,
   },
   homeBtnInner: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     backgroundColor: '#9CA3AF',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#6B7280',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    elevation: 7,
   },
   homeBtnInnerActive: {
     backgroundColor: Colors.brand.primary,
     shadowColor: Colors.brand.primary,
-    shadowOpacity: 0.5,
-    shadowRadius: 14,
-    elevation: 12,
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 10,
   },
 });

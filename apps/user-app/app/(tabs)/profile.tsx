@@ -62,7 +62,14 @@ export default function ProfileTab() {
     },
     onError: async (err: any) => {
       const status = err?.response?.status;
-      if (status === 404 || status === 401) {
+      if (status === 404) {
+        Alert.alert(
+          'جلسة منتهية',
+          'انتهت صلاحية جلستك. يرجى تسجيل الدخول مجدداً.',
+          [{ text: 'تسجيل الدخول', onPress: async () => { await logout(); router.replace('/(auth)/welcome'); } }],
+          { cancelable: false },
+        );
+      } else if (status === 401) {
         await logout();
         router.replace('/(auth)/welcome');
       } else {

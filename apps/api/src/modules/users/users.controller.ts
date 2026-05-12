@@ -5,7 +5,6 @@ import {
   Body,
   UseGuards,
   Query,
-  UsePipes,
   ParseIntPipe,
   DefaultValuePipe,
   Post,
@@ -42,17 +41,18 @@ export class UsersController {
 
   @Patch('me')
   @ApiOperation({ summary: 'Update profile' })
-  @UsePipes(new ZodValidationPipe(UpdateUserDto))
-  updateProfile(@CurrentUser() user: JwtPayloadType, @Body() dto: UpdateUserDtoType) {
+  updateProfile(
+    @CurrentUser() user: JwtPayloadType,
+    @Body(new ZodValidationPipe(UpdateUserDto)) dto: UpdateUserDtoType,
+  ) {
     return this.usersService.updateProfile(user.sub, dto);
   }
 
   @Patch('me/location')
   @ApiOperation({ summary: 'Update GPS location for nearby search' })
-  @UsePipes(new ZodValidationPipe(UpdateLocationDto))
   updateLocation(
     @CurrentUser() user: JwtPayloadType,
-    @Body() dto: { longitude: number; latitude: number },
+    @Body(new ZodValidationPipe(UpdateLocationDto)) dto: { longitude: number; latitude: number },
   ) {
     return this.usersService.updateLocation(user.sub, dto.longitude, dto.latitude);
   }

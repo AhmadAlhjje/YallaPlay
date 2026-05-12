@@ -179,11 +179,19 @@ export class AuthService {
   }
 
   async refreshTokens(
-    userId: string,
     incomingRefreshToken: string,
   ): Promise<{ accessToken: string; refreshToken: string }> {
+    let payload: JwtPayloadType;
+    try {
+      payload = await this.jwtService.verifyAsync(incomingRefreshToken, {
+        secret: this.config.getOrThrow('JWT_REFRESH_SECRET'),
+      });
+    } catch {
+      throw new UnauthorizedException('رمز التحديث غير صالح أو منتهي الصلاحية.');
+    }
+
     const user = await this.userModel
-      .findById(userId)
+      .findById(payload.sub)
       .select('+refreshTokenHash')
       .lean();
 

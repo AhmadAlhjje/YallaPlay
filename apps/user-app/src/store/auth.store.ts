@@ -105,9 +105,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: async () => {
+    // Fire-and-forget logout to backend while token is still in storage
+    authApi.logout().catch(() => undefined);
     await clearTokens();
     set({ user: null, isAuthenticated: false, isNewUser: false });
-    // Best-effort — do not block UI if API is unreachable.
-    void authApi.logout().catch(() => undefined);
   },
 }));
