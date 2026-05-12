@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
 import { bookingsApi } from '../../src/api/bookings.api';
@@ -13,19 +13,19 @@ import { formatTimeRange } from '../../src/lib/time';
 type Filter = 'upcoming' | 'past';
 
 const STATUS_COLORS: Record<string, string> = {
-  pending:   Colors.warning,
-  confirmed: Colors.success,
-  completed: Colors.info,
-  cancelled: Colors.error,
-  no_show:   Colors.text.tertiary,
+  pending_payment: Colors.warning,
+  confirmed:       Colors.success,
+  completed:       Colors.info,
+  cancelled:       Colors.error,
+  no_show:         Colors.text.tertiary,
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  pending:   'معلّق',
-  confirmed: 'مؤكّد',
-  completed: 'مكتمل',
-  cancelled: 'ملغي',
-  no_show:   'لم يحضر',
+  pending_payment: 'معلّق',
+  confirmed:       'مؤكّد',
+  completed:       'مكتمل',
+  cancelled:       'ملغي',
+  no_show:         'لم يحضر',
 };
 
 export default function BookingsTab() {
@@ -36,6 +36,12 @@ export default function BookingsTab() {
     queryFn: () => bookingsApi.getMyBookings(filter),
     staleTime: 30_000,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      refetch();
+    }, [refetch]),
+  );
 
   const bookings = data?.data?.data?.bookings ?? [];
 
@@ -95,7 +101,7 @@ function BookingCard({ booking, onPress }: { booking: any; onPress: () => void }
       <GlassCard style={styles.card}>
         <View style={styles.cardRow}>
           <Text style={[Typography.h3, { color: Colors.text.primary, flex: 1 }]} numberOfLines={1}>
-            {booking.facility?.name ?? '—'}
+            {booking.facilityId?.name ?? '—'}
           </Text>
           <View style={[styles.statusPill, { backgroundColor: statusColor + '22', borderColor: statusColor + '44' }]}>
             <Text style={[Typography.labelSm, { color: statusColor }]}>{statusLabel}</Text>
@@ -110,7 +116,7 @@ function BookingCard({ booking, onPress }: { booking: any; onPress: () => void }
         </View>
 
         <View style={[styles.cardRow, { marginTop: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.border.default, paddingTop: Spacing.md }]}>
-          <Text style={[Typography.numericMd, { color: Colors.brand.primary }]}>{booking.price} ر.س</Text>
+          <Text style={[Typography.numericMd, { color: Colors.brand.primary }]}>{booking.totalPrice} ر.س</Text>
           <Text style={[Typography.labelSm, { color: Colors.text.tertiary, letterSpacing: 2 }]}>#{ref}</Text>
         </View>
       </GlassCard>

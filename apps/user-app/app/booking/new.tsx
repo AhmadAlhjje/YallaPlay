@@ -9,6 +9,7 @@ import * as ImagePicker from 'expo-image-picker';
 import QRCode from 'react-native-qrcode-svg';
 import * as Haptics from 'expo-haptics';
 import { Ionicons } from '@expo/vector-icons';
+import { useQueryClient } from '@tanstack/react-query';
 import { bookingsApi } from '../../src/api/bookings.api';
 import { GlassCard } from '../../src/components/GlassCard';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
@@ -25,6 +26,7 @@ export default function NewBookingScreen() {
     startTime: string; endTime: string; price: string; sport: string; shamCashQr?: string;
   }>();
 
+  const qc = useQueryClient();
   const [step, setStep]             = useState<Step>(1);
   const [loading, setLoading]       = useState(false);
   const [bookingId, setBookingId]   = useState<string | null>(null);
@@ -58,6 +60,8 @@ export default function NewBookingScreen() {
       const booking = res.data?.data;
       setBookingId(booking._id);
       setBookingRef(booking.bookingRef ?? booking._id.slice(-8).toUpperCase());
+      qc.invalidateQueries({ queryKey: ['slots', facilityId, date] });
+      qc.invalidateQueries({ queryKey: ['myBookings'] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setStep(2);
     } catch (err: any) {
