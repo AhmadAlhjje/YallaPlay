@@ -17,11 +17,9 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api/v1');
 
-  // CORS — tighten in production
+  // CORS — mobile apps don't need CORS, web builds do
   app.enableCors({
-    origin: process.env.NODE_ENV === 'development'
-      ? true  // Mirror request origin in dev (works for Expo Go on any IP)
-      : [process.env.ADMIN_DASHBOARD_URL || 'http://localhost:3001'],
+    origin: true,   // Allow all origins (mobile apps bypass CORS anyway)
     credentials: true,
   });
 

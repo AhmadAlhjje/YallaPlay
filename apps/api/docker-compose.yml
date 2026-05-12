@@ -1,0 +1,51 @@
+version: '3.9'
+
+services:
+  # ── MongoDB ────────────────────────────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    container_name: yallaplay_mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USER:-yallaplay}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASS:-change_me_strong_password}
+      MONGO_INITDB_DATABASE: yallaplay
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"          # Remove this line in production for security
+    networks:
+      - yallaplay_net
+
+  # ── API (NestJS) ───────────────────────────────────────────────────────────
+  api:
+    build:
+      context: ../..          # monorepo root
+      dockerfile: apps/api/Dockerfile
+    container_name: yallaplay_api
+    restart: unless-stopped
+    ports:
+      - "7600:7600"
+    environment:
+      NODE_ENV: production
+      PORT: 7600
+      MONGODB_URI: mongodb://${MONGO_ROOT_USER:-yallaplay}:${MONGO_ROOT_PASS:-change_me_strong_password}@mongo:27017/yallaplay?authSource=admin
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_QR_SECRET: ${JWT_QR_SECRET}
+      SMS_PROVIDER: ${SMS_PROVIDER:-console}
+      WHATSAPP_AUTH_DIR: /app/apps/api/.wa_session
+    volumes:
+      - wa_session:/app/apps/api/.wa_session
+    depends_on:
+      - mongo
+    networks:
+      - yallaplay_net
+
+volumes:
+  mongo_data:
+  wa_session:
+
+networks:
+  yallaplay_net:
+    driver: bridge
