@@ -202,7 +202,7 @@ export class AuthService {
     const isValid = await bcrypt.compare(incomingRefreshToken, user.refreshTokenHash);
     if (!isValid) {
       // Potential token reuse — invalidate all sessions
-      await this.userModel.updateOne({ _id: userId }, { $unset: { refreshTokenHash: 1 } });
+      await this.userModel.updateOne({ _id: payload.sub }, { $unset: { refreshTokenHash: 1 } });
       throw new UnauthorizedException('تم اكتشاف نشاط مريب. يرجى تسجيل الدخول مجدداً.');
     }
 
@@ -210,7 +210,7 @@ export class AuthService {
 
     // Rotate: invalidate old refresh token
     const newHash = await bcrypt.hash(newRefreshToken, this.BCRYPT_ROUNDS);
-    await this.userModel.updateOne({ _id: userId }, { $set: { refreshTokenHash: newHash } });
+    await this.userModel.updateOne({ _id: payload.sub }, { $set: { refreshTokenHash: newHash } });
 
     return { accessToken, refreshToken: newRefreshToken };
   }

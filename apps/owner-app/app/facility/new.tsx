@@ -1,15 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Switch,
+  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity,
+  Alert, Switch, Modal, FlatList, Image, ActivityIndicator, Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import * as Haptics from 'expo-haptics';
 import { facilitiesApi } from '../../src/api/facilities.api';
 import { GlassCard } from '../../src/components/GlassCard';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
+
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const SPORTS_LIST = [
   { key: 'football',   label: 'كرة القدم',   emoji: '⚽' },
@@ -20,35 +25,91 @@ const SPORTS_LIST = [
   { key: 'squash',     label: 'إسكواش',       emoji: '🎱' },
 ];
 
+// Starts from Saturday per regional convention
 const DAYS = [
+  { key: 'saturday',  label: 'السبت' },
+  { key: 'sunday',    label: 'الأحد' },
   { key: 'monday',    label: 'الاثنين' },
   { key: 'tuesday',   label: 'الثلاثاء' },
   { key: 'wednesday', label: 'الأربعاء' },
   { key: 'thursday',  label: 'الخميس' },
   { key: 'friday',    label: 'الجمعة' },
-  { key: 'saturday',  label: 'السبت' },
-  { key: 'sunday',    label: 'الأحد' },
 ];
 
-const DEFAULT_HOURS = DAYS.reduce((acc, d) => ({
-  ...acc,
-  [d.key]: { open: '06:00', close: '23:00', isClosed: false },
-}), {} as Record<string, { open: string; close: string; isClosed: boolean }>);
+// 30-minute intervals in 12-hour display, stored as 24h internally
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, i) => {
+  const h = Math.floor(i / 2);
+  const m = (i % 2) * 30;
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  const period = h < 12 ? 'ص' : 'م';
+  return {
+    time24: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`,
+    label:  `${h12}:${String(m).padStart(2, '0')} ${period}`,
+  };
+});
+
+const DEFAULT_HOURS = DAYS.reduce(
+  (acc, d) => ({ ...acc, [d.key]: { open: '06:00', close: '23:00', isClosed: false } }),
+  {} as Record<string, { open: string; close: string; isClosed: boolean }>,
+);
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const to12h = (time24: string) => {
+  const [hStr, mStr] = time24.split(':');
+  const h = parseInt(hStr, 10);
+  const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${h12}:${mStr} ${h < 12 ? 'ص' : 'م'}`;
+};
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type TimePickerTarget =
+  | 'morningFrom' | 'morningTo'
+  | 'eveningFrom' | 'eveningTo'
+  | `hours_${string}_open` | `hours_${string}_close`;
+
+// ─── Screen ───────────────────────────────────────────────────────────────────
 
 export default function NewFacilityScreen() {
   const qc = useQueryClient();
 
+  // Basic info
   const [name, setName]               = useState('');
   const [address, setAddress]         = useState('');
-  const [phone, setPhone]             = useState('');
   const [description, setDescription] = useState('');
-  const [shamCashQr, setShamCashQr]   = useState('');
-  const [pricePerSlot, setPricePerSlot] = useState('');
   const [slotDuration, setSlotDuration] = useState('60');
   const [sports, setSports]           = useState<string[]>([]);
-  const [hours, setHours]             = useState(DEFAULT_HOURS);
-  const [latitude, setLatitude]       = useState('');
-  const [longitude, setLongitude]     = useState('');
+
+  // QR image (stored as local URI; uploaded to server on save)
+  const [qrUri, setQrUri]         = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+
+  // Pricing
+  const [morningEnabled, setMorningEnabled] = useState(true);
+  const [morningFrom,    setMorningFrom]    = useState('06:00');
+  const [morningTo,      setMorningTo]      = useState('14:00');
+  const [morningPrice,   setMorningPrice]   = useState('');
+  const [morningDeposit, setMorningDeposit] = useState('');
+
+  const [eveningEnabled, setEveningEnabled] = useState(true);
+  const [eveningFrom,    setEveningFrom]    = useState('14:00');
+  const [eveningTo,      setEveningTo]      = useState('23:00');
+  const [eveningPrice,   setEveningPrice]   = useState('');
+  const [eveningDeposit, setEveningDeposit] = useState('');
+
+  // Location
+  const [coords, setCoords]               = useState<{ lat: number; lon: number } | null>(null);
+  const [locationLoading, setLocationLoading] = useState(false);
+
+  // Working hours
+  const [hours, setHours] = useState(DEFAULT_HOURS);
+
+  // Time picker modal
+  const [pickerVisible, setPickerVisible]   = useState(false);
+  const [pickerTarget,  setPickerTarget]    = useState<TimePickerTarget | null>(null);
+
+  // ── Mutations ────────────────────────────────────────────────────────────────
 
   const saveMutation = useMutation({
     mutationFn: (dto: any) => facilitiesApi.create(dto),
@@ -57,14 +118,115 @@ export default function NewFacilityScreen() {
       qc.invalidateQueries({ queryKey: ['owner-facilities'] });
       router.back();
     },
-    onError: (err: any) => Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر الحفظ'),
+    onError: (err: any) =>
+      Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر حفظ الملعب'),
   });
 
-  const handleSave = () => {
-    if (!name.trim()) { Alert.alert('', 'اسم الملعب مطلوب'); return; }
-    if (!address.trim()) { Alert.alert('', 'العنوان مطلوب'); return; }
-    if (!pricePerSlot || isNaN(Number(pricePerSlot))) { Alert.alert('', 'السعر غير صحيح'); return; }
+  // ── Handlers ─────────────────────────────────────────────────────────────────
+
+  const pickQrImage = async () => {
+    setQrLoading(true);
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (perm.status !== 'granted') {
+        Alert.alert('الإذن مرفوض', 'يرجى السماح بالوصول إلى معرض الصور');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setQrUri(result.assets[0].uri);
+      }
+    } finally {
+      setQrLoading(false);
+    }
+  };
+
+  const handleUseMyLocation = async () => {
+    setLocationLoading(true);
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('الإذن مرفوض', 'يرجى السماح بالوصول إلى موقعك الجغرافي');
+        return;
+      }
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.High,
+      });
+      setCoords({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+    } catch {
+      Alert.alert('خطأ', 'تعذّر الحصول على موقعك الجغرافي');
+    } finally {
+      setLocationLoading(false);
+    }
+  };
+
+  const openPicker = useCallback((target: TimePickerTarget) => {
+    setPickerTarget(target);
+    setPickerVisible(true);
+  }, []);
+
+  const onPickTime = useCallback((time24: string) => {
+    if (!pickerTarget) return;
+    if (pickerTarget === 'morningFrom')  setMorningFrom(time24);
+    else if (pickerTarget === 'morningTo')   setMorningTo(time24);
+    else if (pickerTarget === 'eveningFrom') setEveningFrom(time24);
+    else if (pickerTarget === 'eveningTo')   setEveningTo(time24);
+    else {
+      // hours_{day}_{open|close}
+      const [, day, field] = pickerTarget.split('_');
+      setHours((prev) => ({
+        ...prev,
+        [day]: { ...prev[day], [field]: time24 },
+      }));
+    }
+    setPickerVisible(false);
+  }, [pickerTarget]);
+
+  const toggleSport = (s: string) =>
+    setSports((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
+
+  const handleSave = async () => {
+    if (!name.trim())    { Alert.alert('', 'اسم الملعب مطلوب');  return; }
+    if (!address.trim()) { Alert.alert('', 'العنوان مطلوب');      return; }
     if (sports.length === 0) { Alert.alert('', 'اختر رياضة واحدة على الأقل'); return; }
+
+    const pricingSchedule: { label: string; from: string; to: string; price: number; deposit?: number }[] = [];
+    let defaultPrice = 0;
+
+    if (morningEnabled) {
+      const p = Number(morningPrice);
+      if (!p || p <= 0) { Alert.alert('', 'أدخل سعر الفترة الصباحية'); return; }
+      const d = Number(morningDeposit);
+      pricingSchedule.push({ label: 'morning', from: morningFrom, to: morningTo, price: p, ...(d > 0 ? { deposit: d } : {}) });
+      defaultPrice = p;
+    }
+    if (eveningEnabled) {
+      const p = Number(eveningPrice);
+      if (!p || p <= 0) { Alert.alert('', 'أدخل سعر الفترة المسائية'); return; }
+      const d = Number(eveningDeposit);
+      pricingSchedule.push({ label: 'evening', from: eveningFrom, to: eveningTo, price: p, ...(d > 0 ? { deposit: d } : {}) });
+      if (!defaultPrice) defaultPrice = p;
+    }
+    if (pricingSchedule.length === 0) {
+      Alert.alert('', 'فعّل فترة تسعيرة واحدة على الأقل'); return;
+    }
+
+    // Upload QR image first (multipart), then use returned URL in the DTO
+    let shamCashQrUrl: string | undefined;
+    if (qrUri) {
+      try {
+        const { data } = await facilitiesApi.uploadQr(qrUri);
+        shamCashQrUrl = data.data.url;
+      } catch {
+        Alert.alert('خطأ', 'تعذّر رفع صورة QR، يمكنك إضافتها لاحقاً من شاشة التعديل');
+        // Continue without QR — not a blocking error
+      }
+    }
 
     const operatingHours: Record<string, { open: string; close: string } | null> = {};
     for (const [day, val] of Object.entries(hours)) {
@@ -72,33 +234,30 @@ export default function NewFacilityScreen() {
     }
 
     const dto: any = {
-      name: name.trim(),
-      address: address.trim(),
-      phone: phone.trim() || undefined,
-      shamCashQr: shamCashQr.trim() || undefined,
-      description: description.trim() || undefined,
-      pricePerSlot: Number(pricePerSlot),
+      name:                name.trim(),
+      address:             address.trim(),
+      description:         description.trim() || undefined,
+      shamCashQr:          shamCashQrUrl,
+      pricePerSlot:        defaultPrice,
+      pricingSchedule,
       slotDurationMinutes: Number(slotDuration),
       sports,
       operatingHours,
     };
 
-    if (latitude && longitude) {
-      dto.location = { type: 'Point', coordinates: [Number(longitude), Number(latitude)] };
+    if (coords) {
+      dto.location = { type: 'Point', coordinates: [coords.lon, coords.lat] };
     }
 
     saveMutation.mutate(dto);
   };
 
-  const toggleSport = (s: string) =>
-    setSports((prev) => prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]);
-
-  const updateHour = (day: string, field: 'open' | 'close' | 'isClosed', value: string | boolean) =>
-    setHours((prev) => ({ ...prev, [day]: { ...prev[day], [field]: value } }));
+  // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safe}>
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()}>
             <Text style={[Typography.bodyLg, { color: Colors.text.secondary }]}>← رجوع</Text>
@@ -107,43 +266,173 @@ export default function NewFacilityScreen() {
           <View style={{ width: 50 }} />
         </View>
 
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: Spacing.xl, paddingBottom: 120 }}>
-
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scroll}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* ── المعلومات الأساسية ─────────────────────────────────── */}
           <SectionTitle title="المعلومات الأساسية" />
-          <GlassCard style={styles.fieldCard}>
+          <GlassCard style={styles.card}>
             <Field label="اسم الملعب *" value={name} onChangeText={setName} placeholder="مثال: ملعب الفردوس" />
             <Divider />
             <Field label="العنوان *" value={address} onChangeText={setAddress} placeholder="الحي، المدينة" />
             <Divider />
-            <Field label="رقم الجوال" value={phone} onChangeText={setPhone} placeholder="+963XXXXXXXXX" keyboardType="phone-pad" />
-            <Divider />
-            <Field label="QR شام كاش" value={shamCashQr} onChangeText={setShamCashQr} placeholder="ضع نص/رابط QR" />
-            <Divider />
-            <Field label="وصف الملعب" value={description} onChangeText={setDescription} placeholder="وصف مختصر..." multiline />
+            <Field label="وصف الملعب" value={description} onChangeText={setDescription} placeholder="وصف مختصر عن الملعب..." multiline />
           </GlassCard>
 
-          <SectionTitle title="التسعير والمدة" />
-          <GlassCard style={styles.fieldCard}>
-            <Field label="السعر لكل حصة (ل.س) *" value={pricePerSlot} onChangeText={setPricePerSlot} keyboardType="numeric" placeholder="5000" />
-            <Divider />
-            <View style={styles.fieldRow}>
-              <Text style={[Typography.labelMd, { color: Colors.text.secondary, flex: 1 }]}>مدة الوقت (دقيقة)</Text>
-              <View style={styles.durationRow}>
-                {['30', '60', '90', '120'].map((d) => (
-                  <TouchableOpacity
-                    key={d}
-                    onPress={() => setSlotDuration(d)}
-                    style={[styles.durationChip, slotDuration === d && styles.durationChipActive]}
-                  >
-                    <Text style={[Typography.labelSm, { color: slotDuration === d ? Colors.brand.primary : Colors.text.tertiary }]}>
-                      {d}
-                    </Text>
+          {/* ── QR شام كاش ────────────────────────────────────────── */}
+          <SectionTitle title="QR شام كاش" />
+          <GlassCard style={styles.card}>
+            <View style={styles.qrSection}>
+              {qrUri ? (
+                <View style={styles.qrPreviewWrap}>
+                  <Image source={{ uri: qrUri }} style={styles.qrPreview} resizeMode="contain" />
+                  <TouchableOpacity style={styles.qrChangeBtn} onPress={pickQrImage}>
+                    <Text style={styles.qrChangeBtnText}>تغيير الصورة</Text>
                   </TouchableOpacity>
-                ))}
-              </View>
+                </View>
+              ) : (
+                <TouchableOpacity style={styles.qrPickBtn} onPress={pickQrImage} disabled={qrLoading}>
+                  {qrLoading
+                    ? <ActivityIndicator color={Colors.brand.primary} />
+                    : <>
+                        <Text style={styles.qrPickIcon}>📷</Text>
+                        <Text style={styles.qrPickLabel}>ارفع صورة QR شام كاش</Text>
+                        <Text style={styles.qrPickHint}>اضغط لاختيار صورة من المعرض</Text>
+                      </>
+                  }
+                </TouchableOpacity>
+              )}
             </View>
           </GlassCard>
 
+          {/* ── التسعيرة ──────────────────────────────────────────── */}
+          <SectionTitle title="التسعيرة" />
+          <GlassCard style={styles.card}>
+            {/* صباحي */}
+            <View style={styles.pricingHeader}>
+              <Switch
+                value={morningEnabled}
+                onValueChange={setMorningEnabled}
+                trackColor={{ true: Colors.brand.primary + '66', false: Colors.glass.border }}
+                thumbColor={morningEnabled ? Colors.brand.primary : Colors.text.tertiary}
+              />
+              <Text style={styles.pricingLabel}>🌅 فترة صباحية</Text>
+            </View>
+            {morningEnabled && (
+              <View style={styles.pricingBody}>
+                <View style={styles.timeRangeRow}>
+                  <Text style={styles.timeRangeLabel}>من</Text>
+                  <TouchableOpacity style={styles.timeBtn} onPress={() => openPicker('morningFrom')}>
+                    <Text style={styles.timeBtnText}>{to12h(morningFrom)}</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.timeRangeLabel}>إلى</Text>
+                  <TouchableOpacity style={styles.timeBtn} onPress={() => openPicker('morningTo')}>
+                    <Text style={styles.timeBtnText}>{to12h(morningTo)}</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.priceInputWrap}>
+                  <TextInput
+                    value={morningPrice}
+                    onChangeText={setMorningPrice}
+                    placeholder="السعر (ل.س)"
+                    placeholderTextColor={Colors.text.tertiary}
+                    keyboardType="numeric"
+                    style={styles.priceInput}
+                    textAlign="right"
+                  />
+                  <Text style={styles.priceUnit}>ل.س / حصة</Text>
+                </View>
+                <View style={styles.priceInputWrap}>
+                  <TextInput
+                    value={morningDeposit}
+                    onChangeText={setMorningDeposit}
+                    placeholder="العربون (اختياري)"
+                    placeholderTextColor={Colors.text.tertiary}
+                    keyboardType="numeric"
+                    style={[styles.priceInput, styles.depositInput]}
+                    textAlign="right"
+                  />
+                  <Text style={styles.priceUnit}>ل.س عربون</Text>
+                </View>
+              </View>
+            )}
+
+            <Divider />
+
+            {/* مسائي */}
+            <View style={styles.pricingHeader}>
+              <Switch
+                value={eveningEnabled}
+                onValueChange={setEveningEnabled}
+                trackColor={{ true: Colors.brand.primary + '66', false: Colors.glass.border }}
+                thumbColor={eveningEnabled ? Colors.brand.primary : Colors.text.tertiary}
+              />
+              <Text style={styles.pricingLabel}>🌆 فترة مسائية</Text>
+            </View>
+            {eveningEnabled && (
+              <View style={styles.pricingBody}>
+                <View style={styles.timeRangeRow}>
+                  <Text style={styles.timeRangeLabel}>من</Text>
+                  <TouchableOpacity style={styles.timeBtn} onPress={() => openPicker('eveningFrom')}>
+                    <Text style={styles.timeBtnText}>{to12h(eveningFrom)}</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.timeRangeLabel}>إلى</Text>
+                  <TouchableOpacity style={styles.timeBtn} onPress={() => openPicker('eveningTo')}>
+                    <Text style={styles.timeBtnText}>{to12h(eveningTo)}</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={styles.priceInputWrap}>
+                  <TextInput
+                    value={eveningPrice}
+                    onChangeText={setEveningPrice}
+                    placeholder="السعر (ل.س)"
+                    placeholderTextColor={Colors.text.tertiary}
+                    keyboardType="numeric"
+                    style={styles.priceInput}
+                    textAlign="right"
+                  />
+                  <Text style={styles.priceUnit}>ل.س / حصة</Text>
+                </View>
+                <View style={styles.priceInputWrap}>
+                  <TextInput
+                    value={eveningDeposit}
+                    onChangeText={setEveningDeposit}
+                    placeholder="العربون (اختياري)"
+                    placeholderTextColor={Colors.text.tertiary}
+                    keyboardType="numeric"
+                    style={[styles.priceInput, styles.depositInput]}
+                    textAlign="right"
+                  />
+                  <Text style={styles.priceUnit}>ل.س عربون</Text>
+                </View>
+              </View>
+            )}
+          </GlassCard>
+
+          {/* ── مدة الحصة ─────────────────────────────────────────── */}
+          <SectionTitle title="مدة الحصة" />
+          <GlassCard style={styles.card}>
+            <View style={styles.durationRow}>
+              {['30', '60', '90', '120'].map((d) => (
+                <TouchableOpacity
+                  key={d}
+                  onPress={() => setSlotDuration(d)}
+                  style={[styles.durationChip, slotDuration === d && styles.durationChipActive]}
+                >
+                  <Text style={[
+                    styles.durationChipText,
+                    { color: slotDuration === d ? Colors.brand.primary : Colors.text.tertiary },
+                  ]}>
+                    {d} د
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </GlassCard>
+
+          {/* ── الرياضات ──────────────────────────────────────────── */}
           <SectionTitle title="الرياضات المتاحة *" />
           <View style={styles.sportsGrid}>
             {SPORTS_LIST.map((s) => {
@@ -154,8 +443,8 @@ export default function NewFacilityScreen() {
                   onPress={() => toggleSport(s.key)}
                   style={[styles.sportChip, selected && styles.sportChipActive]}
                 >
-                  <Text style={{ fontSize: 24 }}>{s.emoji}</Text>
-                  <Text style={[Typography.labelSm, { color: selected ? Colors.brand.primary : Colors.text.secondary }]}>
+                  <Text style={{ fontSize: 22 }}>{s.emoji}</Text>
+                  <Text style={[styles.sportChipText, { color: selected ? Colors.brand.primary : Colors.text.secondary }]}>
                     {s.label}
                   </Text>
                 </TouchableOpacity>
@@ -163,48 +452,95 @@ export default function NewFacilityScreen() {
             })}
           </View>
 
+          {/* ── الموقع الجغرافي ───────────────────────────────────── */}
           <SectionTitle title="الموقع الجغرافي" />
-          <GlassCard style={styles.fieldCard}>
-            <Field label="خط العرض (Latitude)" value={latitude} onChangeText={setLatitude} keyboardType="decimal-pad" placeholder="24.7136" />
-            <Divider />
-            <Field label="خط الطول (Longitude)" value={longitude} onChangeText={setLongitude} keyboardType="decimal-pad" placeholder="46.6753" />
+          <GlassCard style={styles.card}>
+            <TouchableOpacity
+              style={styles.locationBtn}
+              onPress={handleUseMyLocation}
+              disabled={locationLoading}
+            >
+              {locationLoading
+                ? <ActivityIndicator size="small" color={Colors.brand.primary} />
+                : <Text style={styles.locationBtnIcon}>📍</Text>
+              }
+              <Text style={styles.locationBtnText}>
+                {locationLoading ? 'جاري تحديد موقعك...' : 'استخدم موقعي الحالي'}
+              </Text>
+            </TouchableOpacity>
+
+            {coords && (
+              <>
+                <Divider />
+                <View style={styles.coordsCard}>
+                  <Text style={styles.coordsTitle}>✅ تم تحديد الموقع</Text>
+                  <View style={styles.coordsRow}>
+                    <View style={styles.coordItem}>
+                      <Text style={styles.coordLabel}>خط العرض</Text>
+                      <Text style={styles.coordValue}>{coords.lat.toFixed(6)}</Text>
+                    </View>
+                    <View style={styles.coordDivider} />
+                    <View style={styles.coordItem}>
+                      <Text style={styles.coordLabel}>خط الطول</Text>
+                      <Text style={styles.coordValue}>{coords.lon.toFixed(6)}</Text>
+                    </View>
+                  </View>
+                  <TouchableOpacity onPress={() => setCoords(null)} style={styles.coordsClear}>
+                    <Text style={styles.coordsClearText}>حذف الموقع</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {!coords && (
+              <>
+                <Divider />
+                <View style={styles.locationHint}>
+                  <Text style={styles.locationHintText}>
+                    اضغط الزر أعلاه لتحديد موقع الملعب تلقائياً من موقعك الحالي
+                  </Text>
+                </View>
+              </>
+            )}
           </GlassCard>
 
+          {/* ── ساعات العمل ───────────────────────────────────────── */}
           <SectionTitle title="ساعات العمل" />
-          <GlassCard style={styles.fieldCard}>
+          <GlassCard style={styles.card}>
             {DAYS.map((day, i) => (
               <View key={day.key}>
                 {i > 0 && <Divider />}
                 <View style={styles.hourRow}>
                   <Switch
                     value={!hours[day.key]?.isClosed}
-                    onValueChange={(v) => updateHour(day.key, 'isClosed', !v)}
+                    onValueChange={(v) =>
+                      setHours((prev) => ({ ...prev, [day.key]: { ...prev[day.key], isClosed: !v } }))
+                    }
                     trackColor={{ true: Colors.brand.primary + '66', false: Colors.glass.border }}
                     thumbColor={!hours[day.key]?.isClosed ? Colors.brand.primary : Colors.text.tertiary}
                   />
-                  <Text style={[Typography.labelMd, { color: Colors.text.primary, flex: 1 }]}>{day.label}</Text>
+                  <Text style={styles.dayLabel}>{day.label}</Text>
+
                   {!hours[day.key]?.isClosed ? (
-                    <View style={styles.timeInputs}>
-                      <TextInput
-                        value={hours[day.key]?.open}
-                        onChangeText={(v) => updateHour(day.key, 'open', v)}
-                        style={styles.timeInput}
-                        placeholder="06:00"
-                        placeholderTextColor={Colors.text.tertiary}
-                        maxLength={5}
-                      />
-                      <Text style={{ color: Colors.text.tertiary }}>–</Text>
-                      <TextInput
-                        value={hours[day.key]?.close}
-                        onChangeText={(v) => updateHour(day.key, 'close', v)}
-                        style={styles.timeInput}
-                        placeholder="23:00"
-                        placeholderTextColor={Colors.text.tertiary}
-                        maxLength={5}
-                      />
+                    <View style={styles.dayTimeRow}>
+                      <TouchableOpacity
+                        style={styles.timeBtn}
+                        onPress={() => openPicker(`hours_${day.key}_open`)}
+                      >
+                        <Text style={styles.timeBtnText}>{to12h(hours[day.key].open)}</Text>
+                      </TouchableOpacity>
+                      <Text style={styles.timeSep}>–</Text>
+                      <TouchableOpacity
+                        style={styles.timeBtn}
+                        onPress={() => openPicker(`hours_${day.key}_close`)}
+                      >
+                        <Text style={styles.timeBtnText}>{to12h(hours[day.key].close)}</Text>
+                      </TouchableOpacity>
                     </View>
                   ) : (
-                    <Text style={[Typography.labelSm, { color: Colors.text.tertiary }]}>مغلق</Text>
+                    <View style={styles.closedBadge}>
+                      <Text style={styles.closedBadgeText}>مغلق</Text>
+                    </View>
                   )}
                 </View>
               </View>
@@ -219,12 +555,76 @@ export default function NewFacilityScreen() {
           />
         </ScrollView>
       </SafeAreaView>
+
+      {/* ── Time Picker Modal ─────────────────────────────────────────────────── */}
+      <Modal
+        visible={pickerVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setPickerVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setPickerVisible(false)}
+        />
+        <View style={styles.pickerSheet}>
+          <View style={styles.pickerHeader}>
+            <Text style={styles.pickerTitle}>اختر الوقت</Text>
+            <TouchableOpacity onPress={() => setPickerVisible(false)}>
+              <Text style={styles.pickerClose}>✕</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={TIME_OPTIONS}
+            keyExtractor={(item) => item.time24}
+            style={styles.pickerList}
+            showsVerticalScrollIndicator={false}
+            initialScrollIndex={TIME_OPTIONS.findIndex(
+              (t) => t.time24 === (pickerTarget === 'morningFrom' ? morningFrom
+                : pickerTarget === 'morningTo'   ? morningTo
+                : pickerTarget === 'eveningFrom' ? eveningFrom
+                : pickerTarget === 'eveningTo'   ? eveningTo
+                : pickerTarget?.startsWith('hours_')
+                  ? hours[pickerTarget.split('_')[1]]?.[pickerTarget.split('_')[2] as 'open' | 'close']
+                  : '06:00')
+            ) || 0}
+            getItemLayout={(_, index) => ({ length: 52, offset: 52 * index, index })}
+            renderItem={({ item }) => {
+              const current =
+                pickerTarget === 'morningFrom' ? morningFrom
+                : pickerTarget === 'morningTo'   ? morningTo
+                : pickerTarget === 'eveningFrom' ? eveningFrom
+                : pickerTarget === 'eveningTo'   ? eveningTo
+                : pickerTarget?.startsWith('hours_')
+                  ? hours[pickerTarget.split('_')[1]]?.[pickerTarget.split('_')[2] as 'open' | 'close']
+                  : null;
+              const isSelected = item.time24 === current;
+              return (
+                <TouchableOpacity
+                  style={[styles.pickerItem, isSelected && styles.pickerItemActive]}
+                  onPress={() => onPickTime(item.time24)}
+                >
+                  <Text style={[styles.pickerItemText, isSelected && styles.pickerItemTextActive]}>
+                    {item.label}
+                  </Text>
+                  {isSelected && <Text style={styles.pickerCheck}>✓</Text>}
+                </TouchableOpacity>
+              );
+            }}
+          />
+        </View>
+      </Modal>
     </View>
   );
 }
 
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
 function SectionTitle({ title }: { title: string }) {
-  return <Text style={[Typography.h3, styles.sectionTitle]}>{title}</Text>;
+  return (
+    <Text style={[Typography.h3, styles.sectionTitle]}>{title}</Text>
+  );
 }
 
 function Divider() {
@@ -234,12 +634,16 @@ function Divider() {
 function Field({
   label, value, onChangeText, placeholder, keyboardType, multiline,
 }: {
-  label: string; value: string; onChangeText: (t: string) => void;
-  placeholder?: string; keyboardType?: any; multiline?: boolean;
+  label: string;
+  value: string;
+  onChangeText: (t: string) => void;
+  placeholder?: string;
+  keyboardType?: any;
+  multiline?: boolean;
 }) {
   return (
     <View style={styles.field}>
-      <Text style={[Typography.labelSm, { color: Colors.text.tertiary, marginBottom: 4 }]}>{label}</Text>
+      <Text style={styles.fieldLabel}>{label}</Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
@@ -248,33 +652,96 @@ function Field({
         keyboardType={keyboardType ?? 'default'}
         multiline={multiline}
         numberOfLines={multiline ? 3 : 1}
-        style={[styles.textInput, multiline && { height: 72, textAlignVertical: 'top' }]}
+        style={[styles.fieldInput, multiline && { height: 72, textAlignVertical: 'top' }]}
+        textAlign="right"
       />
     </View>
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background.primary },
-  safe: { flex: 1 },
+  safe:      { flex: 1 },
+  scroll:    { paddingHorizontal: Spacing.xl, paddingBottom: 120 },
+
   header: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: Spacing.xl, paddingVertical: Spacing.lg,
   },
+
   sectionTitle: { color: Colors.text.primary, marginTop: Spacing.xl, marginBottom: Spacing.md },
-  fieldCard: { overflow: 'visible' },
-  field: { padding: Spacing.lg },
-  textInput: { color: Colors.text.primary, fontSize: 15, textAlign: 'right', paddingVertical: 4 },
-  fieldRow: { flexDirection: 'row', alignItems: 'center', padding: Spacing.lg, gap: Spacing.md },
-  durationRow: { flexDirection: 'row', gap: 8 },
-  durationChip: {
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: Radius.sm, borderWidth: 1,
-    borderColor: Colors.glass.border, backgroundColor: Colors.glass.subtle,
+  card:         { overflow: 'visible' },
+
+  // Field
+  field:      { padding: Spacing.lg },
+  fieldLabel: { fontSize: 12, color: Colors.text.tertiary, marginBottom: 4, textAlign: 'right' },
+  fieldInput: { color: Colors.text.primary, fontSize: 15, paddingVertical: 4 },
+
+  // QR
+  qrSection: { padding: Spacing.lg, alignItems: 'center' },
+  qrPickBtn: {
+    width: '100%', height: 140, borderRadius: Radius.lg,
+    borderWidth: 1.5, borderColor: Colors.glass.border, borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: Colors.glass.subtle,
   },
-  durationChipActive: { borderColor: Colors.brand.primary, backgroundColor: Colors.brand.primary + '18' },
+  qrPickIcon:  { fontSize: 32 },
+  qrPickLabel: { fontSize: 15, fontWeight: '600', color: Colors.text.primary },
+  qrPickHint:  { fontSize: 12, color: Colors.text.tertiary },
+  qrPreviewWrap: { alignItems: 'center', gap: 12 },
+  qrPreview:  { width: 160, height: 160, borderRadius: Radius.md, backgroundColor: Colors.glass.subtle },
+  qrChangeBtn: {
+    paddingHorizontal: Spacing.lg, paddingVertical: 8,
+    borderRadius: Radius.sm, borderWidth: 1, borderColor: Colors.brand.primary,
+  },
+  qrChangeBtnText: { color: Colors.brand.primary, fontSize: 13, fontWeight: '600' },
+
+  // Pricing
+  pricingHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    padding: Spacing.lg,
+  },
+  pricingLabel: { fontSize: 15, fontWeight: '600', color: Colors.text.primary, flex: 1, textAlign: 'right' },
+  pricingBody:  { paddingHorizontal: Spacing.lg, paddingBottom: Spacing.lg, gap: Spacing.md },
+  timeRangeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'flex-end' },
+  timeRangeLabel: { fontSize: 13, color: Colors.text.secondary },
+  timeBtn: {
+    paddingHorizontal: 14, paddingVertical: 8, borderRadius: Radius.md,
+    backgroundColor: Colors.brand.primary + '15', borderWidth: 1.5,
+    borderColor: Colors.brand.primary + '44',
+  },
+  timeBtnText:  { fontSize: 14, fontWeight: '700', color: Colors.brand.primary },
+  priceInputWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    justifyContent: 'flex-end',
+  },
+  priceInput: {
+    flex: 1, height: 44, borderRadius: Radius.md, borderWidth: 1.5,
+    borderColor: Colors.glass.border, paddingHorizontal: Spacing.md,
+    color: Colors.text.primary, fontSize: 15,
+    backgroundColor: Colors.glass.subtle,
+  },
+  priceUnit:    { fontSize: 13, color: Colors.text.tertiary, minWidth: 60 },
+  depositInput: { borderColor: Colors.warning + '66', borderStyle: 'dashed' },
+
+  // Duration
+  durationRow: {
+    flexDirection: 'row', gap: 10, padding: Spacing.lg,
+    justifyContent: 'center',
+  },
+  durationChip: {
+    flex: 1, paddingVertical: 10, borderRadius: Radius.md,
+    borderWidth: 1.5, borderColor: Colors.glass.border,
+    backgroundColor: Colors.glass.subtle, alignItems: 'center',
+  },
+  durationChipActive: { borderColor: Colors.brand.primary, backgroundColor: Colors.brand.primary + '15' },
+  durationChipText:   { fontSize: 13, fontWeight: '600' },
+
+  // Sports
   sportsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: Spacing.sm },
-  sportChip: {
+  sportChip:  {
     flexDirection: 'row', alignItems: 'center', gap: 8,
     paddingHorizontal: Spacing.md, paddingVertical: 10,
     borderRadius: Radius.lg, borderWidth: 1.5,
@@ -282,13 +749,65 @@ const styles = StyleSheet.create({
     flex: 1, minWidth: '45%',
   },
   sportChipActive: { borderColor: Colors.brand.primary, backgroundColor: Colors.brand.primary + '15' },
-  hourRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.md },
-  timeInputs: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  timeInput: {
-    color: Colors.text.primary, fontSize: 14, fontWeight: '600',
-    backgroundColor: Colors.glass.subtle, borderRadius: Radius.sm,
-    borderWidth: 1, borderColor: Colors.glass.border,
-    paddingHorizontal: 10, paddingVertical: 6,
-    width: 56, textAlign: 'center',
+  sportChipText:   { fontSize: 13, fontWeight: '500' },
+
+  // Location
+  locationBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    padding: Spacing.lg, justifyContent: 'center',
   },
+  locationBtnIcon: { fontSize: 20 },
+  locationBtnText: { fontSize: 15, fontWeight: '600', color: Colors.brand.primary },
+  locationHint:    { padding: Spacing.lg },
+  locationHintText: { fontSize: 13, color: Colors.text.tertiary, textAlign: 'center' },
+  coordsCard:  { padding: Spacing.lg, gap: Spacing.md },
+  coordsTitle: { fontSize: 14, fontWeight: '700', color: '#22c55e', textAlign: 'center' },
+  coordsRow:   { flexDirection: 'row', alignItems: 'center' },
+  coordItem:   { flex: 1, alignItems: 'center', gap: 4 },
+  coordLabel:  { fontSize: 11, color: Colors.text.tertiary },
+  coordValue:  { fontSize: 13, fontWeight: '600', color: Colors.text.primary },
+  coordDivider: { width: 1, height: 32, backgroundColor: Colors.glass.border },
+  coordsClear:  { alignItems: 'center', paddingTop: 4 },
+  coordsClearText: { fontSize: 12, color: Colors.text.tertiary },
+
+  // Hours
+  hourRow: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    padding: Spacing.md, paddingHorizontal: Spacing.lg,
+  },
+  dayLabel:   { flex: 1, fontSize: 14, fontWeight: '500', color: Colors.text.primary, textAlign: 'right' },
+  dayTimeRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  timeSep:    { color: Colors.text.tertiary, fontSize: 14 },
+  closedBadge: {
+    paddingHorizontal: 10, paddingVertical: 4,
+    borderRadius: Radius.sm, backgroundColor: Colors.glass.subtle,
+  },
+  closedBadgeText: { fontSize: 12, color: Colors.text.tertiary },
+
+  // Time Picker Modal
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  pickerSheet: {
+    backgroundColor: Colors.background.primary,
+    borderTopLeftRadius: 24, borderTopRightRadius: 24,
+    maxHeight: '55%',
+    paddingBottom: Platform.OS === 'ios' ? 34 : 16,
+  },
+  pickerHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: Spacing.lg, borderBottomWidth: 1, borderBottomColor: Colors.glass.border,
+  },
+  pickerTitle: { fontSize: 16, fontWeight: '700', color: Colors.text.primary },
+  pickerClose: { fontSize: 18, color: Colors.text.tertiary, padding: 4 },
+  pickerList:  { flexGrow: 0 },
+  pickerItem: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: Spacing.xl, height: 52,
+    borderBottomWidth: 1, borderBottomColor: Colors.glass.border + '80',
+  },
+  pickerItemActive:     { backgroundColor: Colors.brand.primary + '12' },
+  pickerItemText:       { fontSize: 16, color: Colors.text.secondary },
+  pickerItemTextActive: { color: Colors.brand.primary, fontWeight: '700' },
+  pickerCheck:          { fontSize: 16, color: Colors.brand.primary, fontWeight: '700' },
 });

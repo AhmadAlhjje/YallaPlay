@@ -9,6 +9,14 @@ const OperatingHoursDaySchema = z
   })
   .nullable();
 
+const PricingSlotSchema = z.object({
+  label:   z.enum(['morning', 'evening']),
+  from:    z.string().regex(/^\d{2}:\d{2}$/),
+  to:      z.string().regex(/^\d{2}:\d{2}$/),
+  price:   z.number().positive(),
+  deposit: z.number().min(0).optional(),
+});
+
 export const FacilitySchema = z.object({
   _id: z.string(),
   ownerId: z.string(),
@@ -17,12 +25,13 @@ export const FacilitySchema = z.object({
   sports: z.array(z.enum(SportType)).min(1),
   images: z.array(z.string().url()).max(10).default([]),
   location: GeoPointSchema.optional(),
-  address: z.string().min(5).max(300),
+  address: z.string().min(2).max(300),
   phone: z.string().optional(),
-  shamCashQr: z.string().max(2000).optional(),
+  shamCashQr: z.string().optional(),
   slotDurationMinutes: z.number().int().min(30).max(180),
   operatingHours: z.record(z.enum(DayOfWeek), OperatingHoursDaySchema),
   pricePerSlot: z.number().positive(),
+  pricingSchedule: z.array(PricingSlotSchema).max(2).optional(),
   currency: z.literal('SAR').default('SAR'),
   tags: z.array(z.string()).default([]),
   isActive: z.boolean().default(true),
@@ -63,3 +72,4 @@ export type Facility = z.infer<typeof FacilitySchema>;
 export type CreateFacilityDtoType = z.infer<typeof CreateFacilityDto>;
 export type UpdateFacilityDtoType = z.infer<typeof UpdateFacilityDto>;
 export type FacilitySearchDtoType = z.infer<typeof FacilitySearchDto>;
+export type PricingSlot  = z.infer<typeof PricingSlotSchema>;

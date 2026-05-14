@@ -8,12 +8,16 @@ import {
   Param,
   Query,
   UseGuards,
-  UsePipes,
   HttpCode,
   HttpStatus,
-  ParseIntPipe,
   BadRequestException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname, join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { ApiTags, ApiBearerAuth, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { FacilitiesService } from './facilities.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -36,12 +40,53 @@ import {
 export class FacilitiesController {
   constructor(private readonly facilitiesService: FacilitiesService) {}
 
+  // ─── QR Image Upload ───────────────────────────────────────────────────────
+
+  @Post('upload/qr')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('owner')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '[Owner] Upload QR image, returns public URL' })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          const dir = join(process.cwd(), 'uploads', 'qr');
+          if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+          cb(null, dir);
+        },
+        filename: (_req, file, cb) =>
+          cb(null, `${Date.now()}${extname(file.originalname)}`),
+      }),
+      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        if (!file.mimetype.startsWith('image/'))
+          cb(new BadRequestException('يُسمح بالصور فقط'), false);
+        else cb(null, true);
+      },
+    }),
+  )
+  uploadQr(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('لم يتم رفع أي ملف');
+    return { url: `/uploads/qr/${file.filename}` };
+  }
+
   // ─── Public endpoints ──────────────────────────────────────────────────────
 
   @Get()
   @ApiOperation({ summary: 'Search facilities (text + sport + geo filter)' })
   search(@Query(new ZodValidationPipe(FacilitySearchDto)) dto: FacilitySearchDtoType) {
     return this.facilitiesService.search(dto);
+  }
+
+  // Must be declared before @Get(':id') so 'owner' is not captured as a dynamic :id segment
+  @Get('owner/my-facilities')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('owner')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '[Owner] List all my facilities' })
+  findMine(@CurrentUser() user: JwtPayloadType) {
+    return this.facilitiesService.findByOwner(user.sub);
   }
 
   @Get(':id')
@@ -88,8 +133,10 @@ export class FacilitiesController {
   @Roles('owner')
   @ApiBearerAuth()
   @ApiOperation({ summary: '[Owner] Create a new facility' })
-  @UsePipes(new ZodValidationPipe(CreateFacilityDto))
-  create(@CurrentUser() user: JwtPayloadType, @Body() dto: CreateFacilityDtoType) {
+  create(
+    @CurrentUser() user: JwtPayloadType,
+    @Body(new ZodValidationPipe(CreateFacilityDto)) dto: CreateFacilityDtoType,
+  ) {
     return this.facilitiesService.create(user.sub, dto);
   }
 
@@ -98,11 +145,10 @@ export class FacilitiesController {
   @Roles('owner')
   @ApiBearerAuth()
   @ApiOperation({ summary: '[Owner] Update facility details' })
-  @UsePipes(new ZodValidationPipe(UpdateFacilityDto))
   update(
     @Param('id') id: string,
     @CurrentUser() user: JwtPayloadType,
-    @Body() dto: UpdateFacilityDtoType,
+    @Body(new ZodValidationPipe(UpdateFacilityDto)) dto: UpdateFacilityDtoType,
   ) {
     return this.facilitiesService.update(id, user.sub, dto);
   }
@@ -117,12 +163,4 @@ export class FacilitiesController {
     return this.facilitiesService.softDelete(id, user.sub);
   }
 
-  @Get('owner/my-facilities')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('owner')
-  @ApiBearerAuth()
-  @ApiOperation({ summary: '[Owner] List all my facilities' })
-  findMine(@CurrentUser() user: JwtPayloadType) {
-    return this.facilitiesService.findByOwner(user.sub);
-  }
 }

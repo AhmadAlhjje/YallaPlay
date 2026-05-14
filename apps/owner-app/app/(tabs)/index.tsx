@@ -20,7 +20,8 @@ export default function DashboardTab() {
   const { data: facilitiesRes } = useQuery({
     queryKey: ['owner-facilities'],
     queryFn: () => facilitiesApi.getMyFacilities(),
-    staleTime: 300_000,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const { data: summaryRes, isLoading: summaryLoading, refetch } = useQuery({
@@ -29,7 +30,12 @@ export default function DashboardTab() {
     staleTime: 60_000,
   });
 
-  const facilities: any[] = facilitiesRes?.data?.data ?? [];
+  const facilitiesPayload = facilitiesRes?.data;
+  const facilities: any[] = Array.isArray(facilitiesPayload?.data)
+    ? facilitiesPayload.data
+    : Array.isArray(facilitiesPayload)
+      ? facilitiesPayload
+      : facilitiesPayload?.facilities ?? [];
   const summary = summaryRes?.data?.data;
 
   const todayDate = new Date().toISOString().split('T')[0];

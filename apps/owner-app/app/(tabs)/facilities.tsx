@@ -20,10 +20,11 @@ const SPORT_ICONS: Record<string, string> = {
 export default function FacilitiesTab() {
   const qc = useQueryClient();
 
-  const { data, isLoading, refetch, isFetching } = useQuery({
+  const { data, isLoading, isError, refetch, isFetching } = useQuery({
     queryKey: ['owner-facilities'],
     queryFn: () => facilitiesApi.getMyFacilities(),
-    staleTime: 60_000,
+    staleTime: 0,
+    refetchOnMount: true,
   });
 
   const deleteMutation = useMutation({
@@ -52,7 +53,12 @@ export default function FacilitiesTab() {
     );
   };
 
-  const facilities: any[] = data?.data?.data ?? [];
+  const facilitiesPayload = data?.data;
+  const facilities: any[] = Array.isArray(facilitiesPayload?.data)
+    ? facilitiesPayload.data
+    : Array.isArray(facilitiesPayload)
+      ? facilitiesPayload
+      : facilitiesPayload?.facilities ?? [];
 
   return (
     <View style={styles.container}>
@@ -65,6 +71,16 @@ export default function FacilitiesTab() {
 
       {isLoading ? (
         <ActivityIndicator color={Colors.brand.primary} style={{ marginTop: Spacing.huge }} />
+      ) : isError ? (
+        <View style={styles.empty}>
+          <Text style={{ fontSize: 48 }}>⚠️</Text>
+          <Text style={[Typography.h3, { color: Colors.text.primary, marginTop: Spacing.lg, textAlign: 'center' }]}>
+            تعذّر تحميل الملاعب
+          </Text>
+          <TouchableOpacity onPress={refetch} style={[styles.addFirstBtn, { marginTop: Spacing.lg }]}>
+            <Text style={[Typography.labelLg, { color: '#fff' }]}>إعادة المحاولة</Text>
+          </TouchableOpacity>
+        </View>
       ) : facilities.length === 0 ? (
         <View style={styles.empty}>
           <Text style={{ fontSize: 64 }}>🏟️</Text>

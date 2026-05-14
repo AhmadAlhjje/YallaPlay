@@ -39,7 +39,7 @@ export default function OwnerWelcomeScreen() {
       {/* White bottom half */}
       <View style={styles.bottom}>
         <Text style={styles.ctaTitle}>ابدأ الآن</Text>
-        <Text style={styles.ctaSub}>سجّل دخولك أو أنشئ حساباً جديداً</Text>
+        <Text style={styles.ctaSub}>سجّل دخولك للمتابعة</Text>
 
         <TouchableOpacity
           style={styles.loginBtn}
@@ -49,13 +49,7 @@ export default function OwnerWelcomeScreen() {
           <Text style={styles.loginBtnText}>تسجيل الدخول</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={styles.registerBtn}
-          onPress={() => router.push('/(auth)/register')}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.registerBtnText}>إنشاء حساب مالك ملعب</Text>
-        </TouchableOpacity>
+        <Text style={styles.registerNotice}>إنشاء الحساب يتم من لوحة التحكم فقط.</Text>
 
         <Text style={styles.terms}>
           بتسجيل الدخول، أنت توافق على شروط الاستخدام وسياسة الخصوصية
@@ -113,16 +107,7 @@ const styles = StyleSheet.create({
   },
   loginBtnText: { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
 
-  registerBtn: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: Radius.lg,
-    height: 54,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: Colors.brand.primary,
-  },
-  registerBtnText: { color: Colors.brand.primary, fontSize: 17, fontWeight: '700' },
+  registerNotice: { fontSize: 13, color: Colors.text.secondary, textAlign: 'center' },
 
   terms: { fontSize: 12, color: Colors.text.tertiary, textAlign: 'center', marginTop: Spacing.sm },
 });

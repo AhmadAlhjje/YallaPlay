@@ -16,7 +16,9 @@
       "bundleIdentifier": "com.yallaplay.owner",
       "infoPlist": {
         "NSCameraUsageDescription": "للمسح الضوئي لرموز QR الحجوزات",
-        "NSMicrophoneUsageDescription": "مطلوب للكاميرا"
+        "NSMicrophoneUsageDescription": "مطلوب للكاميرا",
+        "NSPhotoLibraryUsageDescription": "لرفع صورة QR شام كاش",
+        "NSLocationWhenInUseUsageDescription": "لتحديد موقع الملعب الجغرافي"
       }
     },
     "android": {
@@ -25,7 +27,7 @@
         "backgroundColor": "#0A0E1A"
       },
       "package": "com.yallaplay.owner",
-      "permissions": ["CAMERA"]
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE", "ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"]
     },
     "web": {
       "bundler": "metro",
@@ -35,7 +37,9 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      ["expo-camera", { "cameraPermission": "للمسح الضوئي لرموز QR الحجوزات" }]
+      ["expo-camera", { "cameraPermission": "للمسح الضوئي لرموز QR الحجوزات" }],
+      ["expo-image-picker", { "photosPermission": "لرفع صورة QR شام كاش" }],
+      ["expo-location", { "locationWhenInUsePermission": "لتحديد موقع الملعب الجغرافي" }]
     ],
     "scheme": "yallaplay-owner",
     "experiments": {
