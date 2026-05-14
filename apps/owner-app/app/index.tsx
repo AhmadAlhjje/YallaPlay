@@ -5,13 +5,12 @@ import { useAuthStore } from '../src/store/auth.store';
 import { Colors } from '../src/theme';
 
 export default function Root() {
-  const { isAuthenticated, isLoading, initialize } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuthStore();
   const [done, setDone] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
   const opacity  = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
-    initialize();
     Animated.timing(progress, {
       toValue: 1,
       duration: 1600,

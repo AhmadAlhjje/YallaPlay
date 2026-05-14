@@ -15,7 +15,8 @@ function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focu
 }
 
 export default function OwnerTabsLayout() {
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuthStore();
+  if (isLoading) return null;
   if (!isAuthenticated) return <Redirect href="/(auth)/welcome" />;
 
   return (

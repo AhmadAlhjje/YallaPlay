@@ -25,7 +25,7 @@ export default function OwnerLoginScreen() {
     setLoading(true);
     try {
       await login(phone, password);
-      router.replace('/(tabs)');
+      // No navigation here — AuthLayout guard detects isAuthenticated → redirects to /(tabs)
     } catch (err: any) {
       const msg = err?.message === 'هذا الحساب ليس حساب مالك ملعب'
         ? 'هذا الحساب مسجل كلاعب، يرجى استخدام تطبيق المستخدم'
@@ -102,13 +102,6 @@ export default function OwnerLoginScreen() {
               {loading ? 'جاري تسجيل الدخول...' : 'تسجيل الدخول'}
             </Text>
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.switchRow} onPress={() => router.replace('/(auth)/register')}>
-            <Text style={styles.switchText}>
-              ليس لديك حساب؟{' '}
-              <Text style={styles.switchLink}>إنشاء حساب</Text>
-            </Text>
-          </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>
     </View>
@@ -181,8 +174,4 @@ const styles = StyleSheet.create({
   },
   submitBtnDisabled: { opacity: 0.45 },
   submitBtnText: { color: '#FFFFFF', fontSize: 17, fontWeight: '700' },
-
-  switchRow: { alignItems: 'center', paddingVertical: Spacing.sm },
-  switchText: { fontSize: 14, color: Colors.text.secondary },
-  switchLink: { color: Colors.brand.primary, fontWeight: '700' },
 });
