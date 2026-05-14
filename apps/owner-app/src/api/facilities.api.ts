@@ -20,6 +20,23 @@ export const facilitiesApi = {
   getSlots: (id: string, date: string) =>
     apiClient.get<{ data: any[] }>(`/facilities/${id}/slots`, { params: { date } }),
 
+  uploadImage: async (uri: string) => {
+    const filename = uri.split('/').pop() ?? 'image.jpg';
+    const ext      = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
+    const mime     = ext === 'png' ? 'image/png' : 'image/jpeg';
+    const formData = new FormData();
+
+    if (Platform.OS === 'web') {
+      const response = await fetch(uri);
+      const blob     = await response.blob();
+      formData.append('file', new File([blob], filename, { type: mime }));
+    } else {
+      formData.append('file', { uri, name: filename, type: mime } as any);
+    }
+
+    return apiClient.post<{ data: { url: string } }>('/facilities/upload/image', formData);
+  },
+
   uploadQr: async (uri: string) => {
     const filename = uri.split('/').pop() ?? 'qr.jpg';
     const ext      = filename.split('.').pop()?.toLowerCase() ?? 'jpg';

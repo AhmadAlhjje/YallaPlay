@@ -71,6 +71,35 @@ export class FacilitiesController {
     return { url: `/uploads/qr/${file.filename}` };
   }
 
+  @Post('upload/image')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('owner')
+  @ApiBearerAuth()
+  @ApiOperation({ summary: '[Owner] Upload facility image, returns public URL' })
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: (_req, _file, cb) => {
+          const dir = join(process.cwd(), 'uploads', 'facilities');
+          if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+          cb(null, dir);
+        },
+        filename: (_req, file, cb) =>
+          cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${extname(file.originalname)}`),
+      }),
+      limits: { fileSize: 8 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        if (!file.mimetype.startsWith('image/'))
+          cb(new BadRequestException('يُسمح بالصور فقط'), false);
+        else cb(null, true);
+      },
+    }),
+  )
+  uploadImage(@UploadedFile() file: Express.Multer.File) {
+    if (!file) throw new BadRequestException('لم يتم رفع أي ملف');
+    return { url: `/uploads/facilities/${file.filename}` };
+  }
+
   // ─── Public endpoints ──────────────────────────────────────────────────────
 
   @Get()

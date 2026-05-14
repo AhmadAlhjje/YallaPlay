@@ -1,0 +1,208 @@
+{
+  "info": {
+    "name": "YallaPlay API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api/v1" },
+    { "key": "accessToken", "value": "" },
+    { "key": "refreshToken", "value": "" },
+    { "key": "facilityId", "value": "" },
+    { "key": "bookingId", "value": "" },
+    { "key": "offerId", "value": "" },
+    { "key": "planId", "value": "" },
+    { "key": "userId", "value": "" },
+    { "key": "ownerId", "value": "" },
+    { "key": "deviceToken", "value": "" },
+    { "key": "waitlistId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Owner Name\",\n  \"phone\": \"+963900000000\",\n  \"password\": \"password123\",\n  \"role\": \"owner\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phone\": \"+963900000000\",\n  \"password\": \"password123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Send OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/otp/send",
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+963900000000\",\n  \"role\": \"owner\"\n}" }
+          }
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/otp/verify",
+            "body": { "mode": "raw", "raw": "{\n  \"phone\": \"+963900000000\",\n  \"otp\": \"123456\"\n}" }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/auth/token/refresh",
+            "body": { "mode": "raw", "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}" }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }],
+            "url": "{{baseUrl}}/auth/logout"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        { "name": "Me", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/users/me" } },
+        { "name": "Update Me", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/users/me", "body": { "mode": "raw", "raw": "{\n  \"name\": \"Owner Name\"\n}" } } },
+        { "name": "Update Location", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/users/me/location", "body": { "mode": "raw", "raw": "{\n  \"type\": \"Point\",\n  \"coordinates\": [36.28, 33.51]\n}" } } },
+        { "name": "Points", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/users/me/points" } },
+        { "name": "Points History", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/users/me/points/history" } },
+        { "name": "My Bookings", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/users/me/bookings" } },
+        { "name": "Add Device Token", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/users/me/device-token", "body": { "mode": "raw", "raw": "{\n  \"token\": \"{{deviceToken}}\"\n}" } } },
+        { "name": "Delete Device Token", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/users/me/device-token" } },
+        { "name": "Favorites", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/users/me/favorites" } },
+        { "name": "Add Favorite", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/users/me/favorites/{{facilityId}}" } },
+        { "name": "Remove Favorite", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/users/me/favorites/{{facilityId}}" } }
+      ]
+    },
+    {
+      "name": "Facilities",
+      "item": [
+        { "name": "Search", "request": { "method": "GET", "url": "{{baseUrl}}/facilities" } },
+        { "name": "My Facilities", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/facilities/owner/my-facilities" } },
+        { "name": "Get By Id", "request": { "method": "GET", "url": "{{baseUrl}}/facilities/{{facilityId}}" } },
+        { "name": "Slots", "request": { "method": "GET", "url": "{{baseUrl}}/facilities/{{facilityId}}/slots?date=2026-05-15" } },
+        { "name": "Rate", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/facilities/{{facilityId}}/rate", "body": { "mode": "raw", "raw": "{\n  \"value\": 5\n}" } } },
+        { "name": "My Rating", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/facilities/{{facilityId}}/my-rating" } },
+        { "name": "Create", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/facilities", "body": { "mode": "raw", "raw": "{\n  \"name\": \"My Stadium\",\n  \"address\": \"Damascus\",\n  \"description\": \"Sample\",\n  \"sports\": [\"football\"],\n  \"slotDurationMinutes\": 60,\n  \"pricePerSlot\": 10000,\n  \"operatingHours\": {\n    \"saturday\": {\"open\": \"06:00\", \"close\": \"23:00\"},\n    \"sunday\": {\"open\": \"06:00\", \"close\": \"23:00\"},\n    \"monday\": {\"open\": \"06:00\", \"close\": \"23:00\"},\n    \"tuesday\": {\"open\": \"06:00\", \"close\": \"23:00\"},\n    \"wednesday\": {\"open\": \"06:00\", \"close\": \"23:00\"},\n    \"thursday\": {\"open\": \"06:00\", \"close\": \"23:00\"},\n    \"friday\": null\n  }\n}" } } },
+        { "name": "Update", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/facilities/{{facilityId}}", "body": { "mode": "raw", "raw": "{\n  \"description\": \"Updated description\"\n}" } } },
+        { "name": "Delete", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/facilities/{{facilityId}}" } },
+        { "name": "Upload QR", "request": { "method": "POST", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/facilities/upload/qr", "body": { "mode": "formdata", "formdata": [{ "key": "file", "type": "file", "src": "" }] } } }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "item": [
+        { "name": "Create", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/bookings", "body": { "mode": "raw", "raw": "{\n  \"facilityId\": \"{{facilityId}}\",\n  \"date\": \"2026-05-15\",\n  \"startTime\": \"18:00\",\n  \"duration\": 60\n}" } } },
+        { "name": "Get By Id", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/bookings/{{bookingId}}" } },
+        { "name": "Delete", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/bookings/{{bookingId}}" } },
+        { "name": "Share WhatsApp", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/bookings/{{bookingId}}/share-whatsapp" } },
+        { "name": "Payment Submitted", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/bookings/{{bookingId}}/payment-submitted" } },
+        { "name": "Confirm QR", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/bookings/confirm-qr", "body": { "mode": "raw", "raw": "{\n  \"qrToken\": \"<qr_token>\"\n}" } } },
+        { "name": "Confirm Manual", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/bookings/{{bookingId}}/confirm-manual", "body": { "mode": "raw", "raw": "{\n  \"note\": \"Confirmed manually\"\n}" } } },
+        { "name": "Facility Bookings", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/bookings/facility/{{facilityId}}" } }
+      ]
+    },
+    {
+      "name": "Offers",
+      "item": [
+        { "name": "Active", "request": { "method": "GET", "url": "{{baseUrl}}/offers/active" } },
+        { "name": "Facility Offers", "request": { "method": "GET", "url": "{{baseUrl}}/offers/facility/{{facilityId}}" } },
+        { "name": "Create", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/offers", "body": { "mode": "raw", "raw": "{\n  \"facilityId\": \"{{facilityId}}\",\n  \"date\": \"2026-05-15\",\n  \"startTime\": \"12:00\",\n  \"discountPercent\": 20\n}" } } },
+        { "name": "Mine", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/offers/mine" } },
+        { "name": "Delete", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/offers/{{offerId}}" } }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/notifications" } },
+        { "name": "Read All", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/notifications/read-all" } },
+        { "name": "Read One", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/notifications/{{notificationId}}/read" } }
+      ]
+    },
+    {
+      "name": "Plans",
+      "item": [
+        { "name": "List", "request": { "method": "GET", "url": "{{baseUrl}}/plans" } },
+        { "name": "My Status", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/plans/my-status" } },
+        { "name": "Upgrade", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/plans/upgrade", "body": { "mode": "raw", "raw": "{\n  \"plan\": \"pro\"\n}" } } },
+        { "name": "Create", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/plans", "body": { "mode": "raw", "raw": "{\n  \"name\": \"Pro\",\n  \"price\": 10000,\n  \"maxFacilities\": 5\n}" } } },
+        { "name": "Update", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/plans/{{planId}}", "body": { "mode": "raw", "raw": "{\n  \"price\": 12000\n}" } } },
+        { "name": "Delete", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/plans/{{planId}}" } }
+      ]
+    },
+    {
+      "name": "Waitlist",
+      "item": [
+        { "name": "Create", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "url": "{{baseUrl}}/waitlist", "body": { "mode": "raw", "raw": "{\n  \"facilityId\": \"{{facilityId}}\",\n  \"date\": \"2026-05-15\"\n}" } } },
+        { "name": "List", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/waitlist" } },
+        { "name": "Delete", "request": { "method": "DELETE", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/waitlist/{{waitlistId}}" } }
+      ]
+    },
+    {
+      "name": "Weather",
+      "item": [
+        { "name": "Current", "request": { "method": "GET", "url": "{{baseUrl}}/weather/current?lat=33.51&lon=36.28" } },
+        { "name": "Forecast", "request": { "method": "GET", "url": "{{baseUrl}}/weather/forecast?lat=33.51&lon=36.28" } },
+        { "name": "Hourly", "request": { "method": "GET", "url": "{{baseUrl}}/weather/hourly?lat=33.51&lon=36.28" } }
+      ]
+    },
+    {
+      "name": "Analytics - Owner",
+      "item": [
+        { "name": "Summary", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/analytics/owner/summary" } },
+        { "name": "Revenue", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/analytics/owner/revenue" } },
+        { "name": "Heatmap", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/analytics/owner/heatmap" } },
+        { "name": "Top Slots", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/analytics/owner/top-slots" } },
+        { "name": "Cancellation Rate", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/analytics/owner/cancellation-rate" } }
+      ]
+    },
+    {
+      "name": "Analytics - Admin",
+      "item": [
+        { "name": "Summary", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/analytics/admin/summary" } },
+        { "name": "Revenue", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/analytics/admin/revenue" } },
+        { "name": "Top Facilities", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/analytics/admin/top-facilities" } },
+        { "name": "Facility Breakdown", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/analytics/admin/facility-breakdown" } }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        { "name": "Users", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/admin/users" } },
+        { "name": "User Detail", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/admin/users/{{userId}}" } },
+        { "name": "Suspend User", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/admin/users/{{userId}}/suspend", "body": { "mode": "raw", "raw": "{\n  \"reason\": \"test\"\n}" } } },
+        { "name": "Reactivate User", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/admin/users/{{userId}}/reactivate" } },
+        { "name": "Override Plan", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/admin/users/{{userId}}/plan", "body": { "mode": "raw", "raw": "{\n  \"plan\": \"pro\"\n}" } } },
+        { "name": "Facilities", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/admin/facilities" } },
+        { "name": "Facility Detail", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/admin/facilities/{{facilityId}}" } },
+        { "name": "Suspend Facility", "request": { "method": "PATCH", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/admin/facilities/{{facilityId}}/suspend", "body": { "mode": "raw", "raw": "{\n  \"reason\": \"test\"\n}" } } },
+        { "name": "Restore Facility", "request": { "method": "PATCH", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/admin/facilities/{{facilityId}}/restore" } },
+        { "name": "Bookings", "request": { "method": "GET", "header": [{ "key": "Authorization", "value": "Bearer {{accessToken}}" }], "url": "{{baseUrl}}/admin/bookings" } }
+      ]
+    }
+  ]
+}

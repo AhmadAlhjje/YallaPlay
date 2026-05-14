@@ -81,6 +81,10 @@ export default function NewFacilityScreen() {
   const [slotDuration, setSlotDuration] = useState('60');
   const [sports, setSports]           = useState<string[]>([]);
 
+  // Facility images (up to 6, uploaded on save)
+  const [images, setImages]             = useState<string[]>([]);
+  const [imagesLoading, setImagesLoading] = useState(false);
+
   // QR image (stored as local URI; uploaded to server on save)
   const [qrUri, setQrUri]         = useState<string | null>(null);
   const [qrLoading, setQrLoading] = useState(false);
@@ -123,6 +127,36 @@ export default function NewFacilityScreen() {
   });
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
+
+  const pickFacilityImages = async () => {
+    if (images.length >= 6) {
+      Alert.alert('', 'الحد الأقصى 6 صور');
+      return;
+    }
+    setImagesLoading(true);
+    try {
+      const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (perm.status !== 'granted') {
+        Alert.alert('الإذن مرفوض', 'يرجى السماح بالوصول إلى معرض الصور');
+        return;
+      }
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsMultipleSelection: true,
+        selectionLimit: 6 - images.length,
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets.length > 0) {
+        const uris = result.assets.map((a) => a.uri);
+        setImages((prev) => [...prev, ...uris].slice(0, 6));
+      }
+    } finally {
+      setImagesLoading(false);
+    }
+  };
+
+  const removeFacilityImage = (index: number) =>
+    setImages((prev) => prev.filter((_, i) => i !== index));
 
   const pickQrImage = async () => {
     setQrLoading(true);
@@ -216,15 +250,30 @@ export default function NewFacilityScreen() {
       Alert.alert('', 'فعّل فترة تسعيرة واحدة على الأقل'); return;
     }
 
-    // Upload QR image first (multipart), then use returned URL in the DTO
+    // Upload facility images first
+    let uploadedImages: string[] = [];
+    if (images.length > 0) {
+      const BASE = process.env.EXPO_PUBLIC_API_URL?.replace('/api/v1', '') ?? '';
+      const results = await Promise.allSettled(
+        images.map((uri) => facilitiesApi.uploadImage(uri)),
+      );
+      uploadedImages = results
+        .filter((r): r is PromiseFulfilledResult<any> => r.status === 'fulfilled')
+        .map((r) => `${BASE}${r.value.data.data.url}`);
+      const failed = results.filter((r) => r.status === 'rejected').length;
+      if (failed > 0)
+        Alert.alert('تنبيه', `تعذّر رفع ${failed} صورة، ستُضاف الباقي`);
+    }
+
+    // Upload QR image
     let shamCashQrUrl: string | undefined;
     if (qrUri) {
       try {
+        const BASE = process.env.EXPO_PUBLIC_API_URL?.replace('/api/v1', '') ?? '';
         const { data } = await facilitiesApi.uploadQr(qrUri);
-        shamCashQrUrl = data.data.url;
+        shamCashQrUrl = `${BASE}${data.data.url}`;
       } catch {
         Alert.alert('خطأ', 'تعذّر رفع صورة QR، يمكنك إضافتها لاحقاً من شاشة التعديل');
-        // Continue without QR — not a blocking error
       }
     }
 
@@ -237,6 +286,7 @@ export default function NewFacilityScreen() {
       name:                name.trim(),
       address:             address.trim(),
       description:         description.trim() || undefined,
+      images:              uploadedImages,
       shamCashQr:          shamCashQrUrl,
       pricePerSlot:        defaultPrice,
       pricingSchedule,
@@ -279,6 +329,44 @@ export default function NewFacilityScreen() {
             <Field label="العنوان *" value={address} onChangeText={setAddress} placeholder="الحي، المدينة" />
             <Divider />
             <Field label="وصف الملعب" value={description} onChangeText={setDescription} placeholder="وصف مختصر عن الملعب..." multiline />
+          </GlassCard>
+
+          {/* ── صور الملعب ────────────────────────────────────────── */}
+          <SectionTitle title={`صور الملعب (${images.length}/6)`} />
+          <GlassCard style={styles.card}>
+            <View style={styles.imagesGrid}>
+              {images.map((uri, idx) => (
+                <View key={idx} style={styles.imageThumbnailWrap}>
+                  <Image source={{ uri }} style={styles.imageThumbnail} resizeMode="cover" />
+                  <TouchableOpacity
+                    style={styles.imageRemoveBtn}
+                    onPress={() => removeFacilityImage(idx)}
+                  >
+                    <Text style={styles.imageRemoveBtnText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
+              {images.length < 6 && (
+                <TouchableOpacity
+                  style={styles.imageAddBtn}
+                  onPress={pickFacilityImages}
+                  disabled={imagesLoading}
+                >
+                  {imagesLoading
+                    ? <ActivityIndicator color={Colors.brand.primary} />
+                    : <>
+                        <Text style={styles.imageAddIcon}>📸</Text>
+                        <Text style={styles.imageAddLabel}>
+                          {images.length === 0 ? 'أضف صوراً' : 'أضف المزيد'}
+                        </Text>
+                      </>
+                  }
+                </TouchableOpacity>
+              )}
+            </View>
+            <View style={{ paddingHorizontal: Spacing.lg, paddingBottom: Spacing.md }}>
+              <Text style={styles.imagesHint}>الحد الأقصى 6 صور · JPG أو PNG · حجم أقصى 8 ميغا للصورة</Text>
+            </View>
           </GlassCard>
 
           {/* ── QR شام كاش ────────────────────────────────────────── */}
@@ -810,4 +898,34 @@ const styles = StyleSheet.create({
   pickerItemText:       { fontSize: 16, color: Colors.text.secondary },
   pickerItemTextActive: { color: Colors.brand.primary, fontWeight: '700' },
   pickerCheck:          { fontSize: 16, color: Colors.brand.primary, fontWeight: '700' },
+
+  // Facility Images
+  imagesGrid: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 10,
+    padding: Spacing.lg, paddingBottom: Spacing.md,
+  },
+  imageThumbnailWrap: {
+    width: 96, height: 96, borderRadius: Radius.md, overflow: 'hidden',
+    position: 'relative',
+  },
+  imageThumbnail: { width: '100%', height: '100%' },
+  imageRemoveBtn: {
+    position: 'absolute', top: 4, right: 4,
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  imageRemoveBtnText: { color: '#fff', fontSize: 12, fontWeight: '700', lineHeight: 14 },
+  imageAddBtn: {
+    width: 96, height: 96, borderRadius: Radius.md,
+    borderWidth: 1.5, borderColor: Colors.brand.primary + '55', borderStyle: 'dashed',
+    backgroundColor: Colors.brand.primary + '08',
+    alignItems: 'center', justifyContent: 'center', gap: 4,
+  },
+  imageAddIcon:  { fontSize: 24 },
+  imageAddLabel: { fontSize: 11, color: Colors.brand.primary, fontWeight: '600', textAlign: 'center' },
+  imagesHint: {
+    fontSize: 12, color: Colors.text.tertiary,
+    textAlign: 'center', paddingBottom: Spacing.sm,
+  },
 });

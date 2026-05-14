@@ -65,8 +65,15 @@ export class FacilitiesService {
   }
 
   async findByOwner(ownerId: string): Promise<FacilityDocument[]> {
+    let objectId: Types.ObjectId | null = null;
+    try { objectId = new Types.ObjectId(ownerId); } catch { /* invalid hex */ }
+
+    const query = objectId
+      ? { $or: [{ ownerId: objectId }, { ownerId: ownerId }] }
+      : { ownerId: ownerId };
+
     return this.facilityModel
-      .find({ ownerId: new Types.ObjectId(ownerId) })
+      .find(query)
       .sort({ createdAt: -1 })
       .lean() as unknown as FacilityDocument[];
   }
