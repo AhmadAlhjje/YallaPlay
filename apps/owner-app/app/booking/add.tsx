@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { facilitiesApi } from '../../src/api/facilities.api';
 import { bookingsApi } from '../../src/api/bookings.api';
+import { formatTime12h, formatTimeRange } from '../../src/lib/time';
 import { GlassCard } from '../../src/components/GlassCard';
 import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
@@ -45,9 +46,6 @@ const SPORT_LABELS: Record<string, string> = {
 
 export default function AddBookingScreen() {
   const qc = useQueryClient();
-
-  // Step: 'form' | 'slots'
-  const [step, setStep] = useState<'form' | 'slots'>('form');
 
   // Form state
   const [selectedFacilityId, setSelectedFacilityId] = useState<string>('');
@@ -111,12 +109,16 @@ export default function AddBookingScreen() {
     }),
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      // Invalidate all relevant queries including slots so the booked slot disappears
       qc.invalidateQueries({ queryKey: ['owner-bookings'] });
       qc.invalidateQueries({ queryKey: ['today-bookings'] });
       qc.invalidateQueries({ queryKey: ['owner-summary'] });
-      Alert.alert('تم ✅', 'تمت إضافة الحجز بنجاح.', [
-        { text: 'حسناً', onPress: () => router.back() },
-      ]);
+      qc.invalidateQueries({ queryKey: ['facility-slots', selectedFacilityId, selectedDate] });
+      // Navigate first, then alert (Alert.alert callback is unreliable on web)
+      router.back();
+      setTimeout(() => {
+        Alert.alert('تم الحجز ✅', `تمت إضافة حجز ${guestName.trim()} بنجاح وهو مؤكد الآن.`);
+      }, 300);
     },
     onError: (err: any) => {
       const msg = err?.response?.data?.message ?? 'تعذّرت إضافة الحجز.';
@@ -131,10 +133,6 @@ export default function AddBookingScreen() {
     createMutation.mutate();
   };
 
-  const goToSlots = () => {
-    if (!selectedFacilityId) return Alert.alert('تنبيه', 'الرجاء اختيار الملعب أولاً.');
-    setStep('slots');
-  };
 
   if (facilitiesLoading) {
     return (
@@ -248,7 +246,7 @@ export default function AddBookingScreen() {
         {/* ── Slot picker ───────────────────────────────────────── */}
         <View style={styles.slotSection}>
           <SectionLabel>
-            الوقت{selectedSlot ? ` — ${selectedSlot.startTime} إلى ${selectedSlot.endTime}` : ''}
+            الوقت{selectedSlot ? ` — ${formatTime12h(selectedSlot.startTime)} إلى ${formatTime12h(selectedSlot.endTime)}` : ''}
           </SectionLabel>
           {slotsLoading ? (
             <ActivityIndicator color={Colors.brand.primary} style={{ marginVertical: Spacing.lg }} />
@@ -269,7 +267,7 @@ export default function AddBookingScreen() {
                     onPress={() => setSelectedSlot({ startTime: slot.startTime, endTime: slot.endTime })}
                     style={[styles.slotChip, active && styles.slotChipActive]}
                   >
-                    <Text style={[styles.slotTime, active && { color: '#fff' }]}>{slot.startTime}</Text>
+                    <Text style={[styles.slotTime, active && { color: '#fff' }]}>{formatTime12h(slot.startTime)}</Text>
                     <Text style={[styles.slotPrice, active && { color: 'rgba(255,255,255,0.8)' }]}>
                       {slot.price} ل.س
                     </Text>
@@ -306,7 +304,7 @@ export default function AddBookingScreen() {
             </Text>
             <SummaryRow label="الملعب" value={selectedFacility?.name ?? '—'} />
             <SummaryRow label="التاريخ" value={selectedDate} />
-            <SummaryRow label="الوقت" value={`${selectedSlot.startTime} — ${selectedSlot.endTime}`} />
+            <SummaryRow label="الوقت" value={`${formatTime12h(selectedSlot.startTime)} — ${formatTime12h(selectedSlot.endTime)}`} />
             {guestName ? <SummaryRow label="الاسم" value={guestName} /> : null}
             {depositPaid ? <SummaryRow label="العربون" value={`${depositPaid} ل.س`} highlight /> : null}
           </GlassCard>
@@ -315,9 +313,10 @@ export default function AddBookingScreen() {
         {/* ── Submit ────────────────────────────────────────────── */}
         <View style={{ marginTop: Spacing.xl }}>
           <PrimaryButton
-            title={createMutation.isPending ? 'جاري الحجز...' : 'تأكيد الحجز'}
+            label={createMutation.isPending ? 'جاري الحجز...' : 'تأكيد الحجز ✓'}
             onPress={handleSubmit}
-            disabled={createMutation.isPending || !selectedSlot || !guestName.trim()}
+            loading={createMutation.isPending}
+            disabled={!selectedSlot || !guestName.trim()}
           />
         </View>
 

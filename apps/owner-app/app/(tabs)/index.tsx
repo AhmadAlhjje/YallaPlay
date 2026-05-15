@@ -13,6 +13,7 @@ import { bookingsApi } from '../../src/api/bookings.api';
 import { GlassCard } from '../../src/components/GlassCard';
 import { useAuthStore } from '../../src/store/auth.store';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
+import { formatTime12h } from '../../src/lib/time';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -389,8 +390,8 @@ function TodayBookingRow({ booking }: { booking: any }) {
   return (
     <GlassCard style={[styles.todayRow, isPending && { borderLeftWidth: 3, borderLeftColor: Colors.warning }]}>
       <View style={styles.todayTimeBox}>
-        <Text style={styles.todayTime}>{booking.startTime}</Text>
-        <Text style={styles.todayTimeSub}>{booking.endTime}</Text>
+        <Text style={styles.todayTime}>{formatTime12h(booking.startTime)}</Text>
+        <Text style={styles.todayTimeSub}>{formatTime12h(booking.endTime)}</Text>
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[Typography.labelMd, { color: Colors.text.primary }]} numberOfLines={1}>

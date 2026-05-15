@@ -387,7 +387,7 @@ export class BookingsService {
         startTime: dto.startTime,
         endTime,
         status: 'confirmed',
-        paymentMethod: 'cash',
+        paymentMethod: 'qr_cash',
         paymentStatus: 'paid',
         totalPrice: price.final,
         discountApplied: 0,
