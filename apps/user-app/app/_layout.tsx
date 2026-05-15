@@ -59,7 +59,7 @@ export default function RootLayout() {
               screenOptions={{
                 headerShown: false,
                 contentStyle: { backgroundColor: Colors.background.primary },
-                animation: Platform.OS === 'web' ? 'none' : 'ios',
+                animation: Platform.OS === 'web' ? 'none' : 'default',
                 animationDuration: Platform.OS === 'android' ? 280 : undefined,
               }}
             >

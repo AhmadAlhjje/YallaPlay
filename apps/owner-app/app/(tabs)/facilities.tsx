@@ -58,7 +58,7 @@ export default function FacilitiesTab() {
     ? facilitiesPayload.data
     : Array.isArray(facilitiesPayload)
       ? facilitiesPayload
-      : facilitiesPayload?.facilities ?? [];
+      : (facilitiesPayload as any)?.facilities ?? [];
 
   return (
     <View style={styles.container}>
@@ -77,7 +77,7 @@ export default function FacilitiesTab() {
           <Text style={[Typography.h3, { color: Colors.text.primary, marginTop: Spacing.lg, textAlign: 'center' }]}>
             تعذّر تحميل الملاعب
           </Text>
-          <TouchableOpacity onPress={refetch} style={[styles.addFirstBtn, { marginTop: Spacing.lg }]}>
+          <TouchableOpacity onPress={() => void refetch()} style={[styles.addFirstBtn, { marginTop: Spacing.lg }]}>
             <Text style={[Typography.labelLg, { color: '#fff' }]}>إعادة المحاولة</Text>
           </TouchableOpacity>
         </View>

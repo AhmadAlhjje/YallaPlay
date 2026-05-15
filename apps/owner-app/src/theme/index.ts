@@ -1,3 +1,5 @@
+import type { FontVariant } from 'react-native/Libraries/StyleSheet/StyleSheetTypes';
+
 export const Colors = {
   brand: {
     primary:   '#16A34A',
@@ -31,6 +33,7 @@ export const Colors = {
   border: {
     default: '#E5E7EB',
     focus:   '#16A34A',
+    strong:  '#D1D5DB',
   },
   // Top-level status shortcuts (used by screens)
   success:   '#10B981',
@@ -79,7 +82,7 @@ export const Typography = {
   labelLg:   { fontSize: 16, fontWeight: '600' as const },
   labelMd:   { fontSize: 14, fontWeight: '600' as const },
   labelSm:   { fontSize: 12, fontWeight: '600' as const },
-  numericLg: { fontSize: 32, fontWeight: '700' as const, fontVariant: ['tabular-nums'] as const },
-  numericMd: { fontSize: 20, fontWeight: '700' as const, fontVariant: ['tabular-nums'] as const },
-  numericSm: { fontSize: 14, fontWeight: '600' as const, fontVariant: ['tabular-nums'] as const },
+  numericLg: { fontSize: 32, fontWeight: '700' as const, fontVariant: ['tabular-nums'] as FontVariant[] },
+  numericMd: { fontSize: 20, fontWeight: '700' as const, fontVariant: ['tabular-nums'] as FontVariant[] },
+  numericSm: { fontSize: 14, fontWeight: '600' as const, fontVariant: ['tabular-nums'] as FontVariant[] },
 };

@@ -81,7 +81,7 @@ export default function OwnerBookingsTab() {
     ? facilitiesPayload.data
     : Array.isArray(facilitiesPayload)
       ? facilitiesPayload
-      : facilitiesPayload?.facilities ?? [];
+      : (facilitiesPayload as any)?.facilities ?? [];
 
   const activeFacilityId = selectedFacility ?? facilities[0]?._id;
 

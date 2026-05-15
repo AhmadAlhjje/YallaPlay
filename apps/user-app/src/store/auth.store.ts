@@ -88,7 +88,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   verifyOtp: async (phone: string, otp: string) => {
     const { data } = await authApi.verifyOtp({ phone, otp });
-    const { accessToken, refreshToken, user, isNewUser } = data.data;
+    const { accessToken, refreshToken, user, isNewUser } = data.data as any;
 
     await saveTokens(accessToken, refreshToken);
     set({ user, isAuthenticated: true, isNewUser: !!isNewUser });

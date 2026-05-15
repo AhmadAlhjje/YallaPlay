@@ -71,7 +71,7 @@ export default function AddBookingScreen() {
     ? facilitiesPayload.data
     : Array.isArray(facilitiesPayload)
       ? facilitiesPayload
-      : facilitiesPayload?.facilities ?? [];
+      : (facilitiesPayload as any)?.facilities ?? [];
 
   // Auto-select first facility
   useEffect(() => {

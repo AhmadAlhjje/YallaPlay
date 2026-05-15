@@ -54,7 +54,7 @@ export default function OffersScreen() {
     ? facilitiesPayload.data
     : Array.isArray(facilitiesPayload)
       ? facilitiesPayload
-      : facilitiesPayload?.facilities ?? [];
+      : (facilitiesPayload as any)?.facilities ?? [];
 
   useEffect(() => {
     if (facilities.length > 0 && !selectedFacility) {

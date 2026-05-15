@@ -63,7 +63,7 @@ export function FacilityCard({ facility, onPress, variant = 'full', style }: Fac
             source={localImage}
             style={styles.compactImg}
             contentFit="cover"
-            placeholder={{ color: Colors.background.secondary }}
+            placeholder={null}
           />
           {primarySport && (
             <View style={styles.compactSportBadge}>
@@ -121,7 +121,7 @@ export function FacilityCard({ facility, onPress, variant = 'full', style }: Fac
           source={localImage}
           style={styles.image}
           contentFit="cover"
-          placeholder={{ color: Colors.background.secondary }}
+          placeholder={null}
         />
 
         {/* Subtle gradient at top for badge readability */}
