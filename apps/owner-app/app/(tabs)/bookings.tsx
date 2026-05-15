@@ -16,7 +16,7 @@ import { formatTime12h, formatTimeRange } from '../../src/lib/time';
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<string, string> = {
-  awaiting_payment: 'بانتظار الدفع',
+  // awaiting_payment: 'بانتظار الدفع',
   pending_payment:  'بانتظار التأكيد',
   confirmed:        'مؤكّد',
   completed:        'مكتمل',
@@ -24,13 +24,22 @@ const STATUS_LABELS: Record<string, string> = {
   no_show:          'لم يحضر',
 };
 const STATUS_COLORS: Record<string, string> = {
-  awaiting_payment: Colors.text.tertiary,
+  // awaiting_payment: Colors.text.tertiary,
   pending_payment:  Colors.warning,
   confirmed:        Colors.success,
   completed:        Colors.info,
   cancelled:        Colors.error,
   no_show:          Colors.text.tertiary,
 };
+
+const STATUS_FILTERS = [
+  { key: 'all',              label: 'الكل',              icon: '📋', color: Colors.brand.primary },
+  { key: 'pending_payment',  label: 'انتظار التأكيد',    icon: '⏳', color: Colors.warning },
+  // { key: 'awaiting_payment', label: 'انتظار الدفع',      icon: '💳', color: Colors.text.tertiary },
+  { key: 'confirmed',        label: 'مؤكّد',             icon: '✅', color: Colors.success },
+  { key: 'cancelled',        label: 'ملغي',              icon: '❌', color: Colors.error },
+  { key: 'completed',        label: 'مكتمل',             icon: '🏁', color: Colors.info },
+];
 
 function buildDays() {
   const out: { iso: string; dayLabel: string; dateLabel: string; isToday: boolean }[] = [];
@@ -57,6 +66,7 @@ export default function OwnerBookingsTab() {
   const [scheduleDate, setScheduleDate]         = useState(today);
   const [selectedFacility, setSelectedFacility] = useState<string | undefined>();
   const [detailBooking, setDetailBooking]       = useState<any>(null);
+  const [statusFilter, setStatusFilter]         = useState<string>('all');
 
   // ── Facilities ──
   const { data: facilitiesRes } = useQuery({
@@ -97,6 +107,11 @@ export default function OwnerBookingsTab() {
   })), [allSlots, dayBookings]);
 
   const pendingCount = dayBookings.filter(b => b.status === 'pending_payment').length;
+
+  const filteredSchedule = useMemo(() => {
+    if (statusFilter === 'all') return schedule;
+    return schedule.filter(s => s.booking?.status === statusFilter);
+  }, [schedule, statusFilter]);
 
   // ── Mutations ──
   const confirmMutation = useMutation({
@@ -190,13 +205,49 @@ export default function OwnerBookingsTab() {
             return (
               <TouchableOpacity
                 key={d.iso}
-                onPress={() => setScheduleDate(d.iso)}
+                onPress={() => { setScheduleDate(d.iso); setStatusFilter('all'); }}
                 style={[styles.dayChip, active && styles.dayChipActive]}
               >
                 <Text style={[styles.dayChipDay, active && styles.dayChipDayActive]}>{d.dayLabel}</Text>
                 <Text style={[styles.dayChipDate, active && styles.dayChipDateActive]}>{d.dateLabel}</Text>
                 {d.isToday && (
                   <View style={[styles.todayDot, active && styles.todayDotActive]} />
+                )}
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      </View>
+
+      {/* ══ Status Filter ═══════════════════════════════════════════ */}
+      <View style={styles.filterWrap}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
+          {STATUS_FILTERS.map((f) => {
+            const active = statusFilter === f.key;
+            const count = f.key === 'all'
+              ? dayBookings.length
+              : dayBookings.filter(b => b.status === f.key).length;
+            return (
+              <TouchableOpacity
+                key={f.key}
+                onPress={() => setStatusFilter(f.key)}
+                style={[styles.filterChip, active && { backgroundColor: f.color, borderColor: f.color }]}
+                activeOpacity={0.75}
+              >
+                <Text style={[styles.filterChipIcon]}>{f.icon}</Text>
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
+                  {f.label}
+                </Text>
+                {count > 0 && (
+                  <View style={[styles.filterBadge, active && styles.filterBadgeActive]}>
+                    <Text style={[styles.filterBadgeText, active && styles.filterBadgeTextActive]}>
+                      {count}
+                    </Text>
+                  </View>
                 )}
               </TouchableOpacity>
             );
@@ -216,9 +267,15 @@ export default function OwnerBookingsTab() {
           <Text style={styles.emptyTitle}>لا توجد أوقات في هذا اليوم</Text>
           <Text style={styles.emptySubtitle}>قد يكون الملعب مغلقاً أو لم تُضبط ساعات العمل</Text>
         </View>
+      ) : filteredSchedule.length === 0 ? (
+        <View style={styles.empty}>
+          <Text style={{ fontSize: 48 }}>📋</Text>
+          <Text style={styles.emptyTitle}>لا توجد حجوزات بهذه الحالة</Text>
+          <Text style={styles.emptySubtitle}>جرّب تغيير الفلتر لعرض حجوزات أخرى</Text>
+        </View>
       ) : (
         <FlatList
-          data={schedule}
+          data={filteredSchedule}
           keyExtractor={(s) => s.startTime}
           contentContainerStyle={styles.timeline}
           showsVerticalScrollIndicator={false}
@@ -709,4 +766,32 @@ const styles = StyleSheet.create({
     gap: 4, paddingVertical: Spacing.md,
   },
   fullDetailText: { fontSize: 13, color: Colors.text.tertiary },
+
+  // Status filter
+  filterWrap: {
+    backgroundColor: Colors.background.primary,
+    borderBottomWidth: 1, borderBottomColor: Colors.border.default,
+  },
+  filterRow: {
+    paddingHorizontal: Spacing.xl, paddingVertical: 10, gap: 8,
+  },
+  filterChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    paddingHorizontal: 12, paddingVertical: 7,
+    borderRadius: Radius.full, borderWidth: 1.5,
+    borderColor: Colors.border.strong,
+    backgroundColor: Colors.background.secondary,
+  },
+  filterChipIcon: { fontSize: 13 },
+  filterChipText: { fontSize: 13, fontWeight: '600', color: Colors.text.secondary },
+  filterChipTextActive: { color: '#fff' },
+  filterBadge: {
+    minWidth: 18, height: 18, borderRadius: 9,
+    backgroundColor: Colors.border.strong,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 4,
+  },
+  filterBadgeActive: { backgroundColor: 'rgba(255,255,255,0.3)' },
+  filterBadgeText: { fontSize: 10, fontWeight: '800', color: Colors.text.tertiary },
+  filterBadgeTextActive: { color: '#fff' },
 });

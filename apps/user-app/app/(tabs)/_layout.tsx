@@ -201,12 +201,11 @@ const styles = StyleSheet.create({
   homeWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -10,
   },
   homeBtnInner: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: '#9CA3AF',
     alignItems: 'center',
     justifyContent: 'center',
