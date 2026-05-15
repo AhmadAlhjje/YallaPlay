@@ -105,24 +105,21 @@ export default function OffersScreen() {
     mutationFn: (id: string) => offersApi.deactivate(id),
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setPendingDeleteId(null);
       qc.invalidateQueries({ queryKey: ['owner-offers'] });
-      Alert.alert('تم', 'تم إلغاء العرض بنجاح');
     },
-    onError: (err: any) => Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر إلغاء العرض'),
+    onError: (err: any) => {
+      setPendingDeleteId(null);
+      Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر إلغاء العرض');
+    },
   });
 
   const slots: any[]   = slotsRes?.data?.data ?? [];
   const availableSlots = slots.filter((s) => s.status === 'available');
   const activeOffers: any[] = offersRes?.data?.data ?? [];
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const canCreate = !!startTime && !!selectedFacility && parsedNewPrice > 0 && parsedNewPrice < originalPrice;
-
-  const confirmDeactivate = (id: string) => {
-    Alert.alert('إلغاء العرض', 'هل تريد إلغاء هذا العرض؟', [
-      { text: 'لا', style: 'cancel' },
-      { text: 'نعم، إلغاء', style: 'destructive', onPress: () => deactivateMutation.mutate(id) },
-    ]);
-  };
 
   return (
     <View style={styles.container}>
@@ -176,7 +173,14 @@ export default function OffersScreen() {
           onRefresh={refetch}
           refreshing={false}
           renderItem={({ item }) => (
-            <OfferCard offer={item} onDeactivate={() => confirmDeactivate(item._id)} />
+            <OfferCard
+              offer={item}
+              isPendingDelete={pendingDeleteId === item._id}
+              isDeleting={deactivateMutation.isPending && pendingDeleteId === item._id}
+              onDeactivate={() => setPendingDeleteId(item._id)}
+              onConfirmDelete={() => deactivateMutation.mutate(item._id)}
+              onCancelDelete={() => setPendingDeleteId(null)}
+            />
           )}
         />
       )}
@@ -322,33 +326,61 @@ export default function OffersScreen() {
   );
 }
 
-function OfferCard({ offer, onDeactivate }: { offer: any; onDeactivate: () => void }) {
+function OfferCard({ offer, isPendingDelete, isDeleting, onDeactivate, onConfirmDelete, onCancelDelete }: {
+  offer: any;
+  isPendingDelete: boolean;
+  isDeleting: boolean;
+  onDeactivate: () => void;
+  onConfirmDelete: () => void;
+  onCancelDelete: () => void;
+}) {
   return (
-    <GlassCard style={styles.offerCard}>
-      <View style={styles.offerLeft}>
-        <View style={styles.discountBadge}>
-          <Text style={[Typography.numericMd, { color: Colors.warning }]}>{offer.discountedPrice ?? '—'}</Text>
-          <Text style={[Typography.bodySm, { color: Colors.warning }]}>ل.س</Text>
+    <View style={[styles.offerCardWrap, isPendingDelete && styles.offerCardWrapPending]}>
+      <View style={styles.offerCardRow}>
+        <View style={styles.offerLeft}>
+          <View style={styles.discountBadge}>
+            <Text style={[Typography.numericMd, { color: Colors.warning }]}>{offer.discountedPrice ?? '—'}</Text>
+            <Text style={[Typography.bodySm, { color: Colors.warning }]}>ل.س</Text>
+          </View>
+          {!!offer.discountPercent && (
+            <Text style={[Typography.labelSm, { color: Colors.warning, marginTop: 4 }]}>{offer.discountPercent}% خصم</Text>
+          )}
         </View>
-        {offer.discountPercent && (
-          <Text style={[Typography.labelSm, { color: Colors.warning, marginTop: 4 }]}>{offer.discountPercent}% خصم</Text>
-        )}
+        <View style={{ flex: 1 }}>
+          <Text style={[Typography.labelLg, { color: Colors.text.primary }]} numberOfLines={1}>
+            {offer.facilityId?.name ?? '—'}
+          </Text>
+          <Text style={[Typography.bodyMd, { color: Colors.text.secondary, marginTop: 2 }]}>
+            📅 {offer.date}
+          </Text>
+          <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>
+            🕐 {formatTime12h(offer.startTime)}
+          </Text>
+        </View>
+        <TouchableOpacity
+          onPress={onDeactivate}
+          style={[styles.deactivateBtn, isPendingDelete && { opacity: 0.4 }]}
+          disabled={isPendingDelete}
+        >
+          <Text style={[Typography.labelSm, { color: Colors.error }]}>إلغاء</Text>
+        </TouchableOpacity>
       </View>
-      <View style={{ flex: 1 }}>
-        <Text style={[Typography.labelLg, { color: Colors.text.primary }]} numberOfLines={1}>
-          {offer.facility?.name ?? '—'}
-        </Text>
-        <Text style={[Typography.bodyMd, { color: Colors.text.secondary, marginTop: 2 }]}>
-          📅 {offer.date}
-        </Text>
-        <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>
-          🕐 {formatTime12h(offer.startTime)}
-        </Text>
-      </View>
-      <TouchableOpacity onPress={onDeactivate} style={styles.deactivateBtn}>
-        <Text style={[Typography.labelSm, { color: Colors.error }]}>إلغاء</Text>
-      </TouchableOpacity>
-    </GlassCard>
+
+      {isPendingDelete && (
+        <View style={styles.confirmRow}>
+          <Text style={styles.confirmText}>تأكيد إلغاء العرض؟</Text>
+          <TouchableOpacity onPress={onCancelDelete} style={styles.confirmNoBtn}>
+            <Text style={styles.confirmNoText}>لا</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={onConfirmDelete} disabled={isDeleting} style={styles.confirmYesBtn}>
+            {isDeleting
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={styles.confirmYesText}>نعم، إلغاء</Text>
+            }
+          </TouchableOpacity>
+        </View>
+      )}
+    </View>
   );
 }
 
@@ -383,11 +415,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.xl, paddingVertical: Spacing.md,
     borderRadius: Radius.lg,
   },
-  offerCard: {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    padding: Spacing.lg, marginBottom: Spacing.md,
+  offerCardWrap: {
+    borderRadius: Radius.lg, borderWidth: 1, borderColor: Colors.glass.border,
+    backgroundColor: Colors.background.primary,
+    marginBottom: Spacing.md, overflow: 'hidden',
     borderLeftWidth: 4, borderLeftColor: Colors.warning,
   },
+  offerCardWrapPending: { borderColor: Colors.error + '55', borderLeftColor: Colors.error },
+  offerCardRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, padding: Spacing.lg },
   offerLeft: { alignItems: 'center' },
   discountBadge: {
     width: 64, height: 64, borderRadius: 32,
@@ -400,6 +435,25 @@ const styles = StyleSheet.create({
     borderRadius: Radius.md, borderWidth: 1.5,
     borderColor: Colors.error + '55', backgroundColor: Colors.errorBg,
   },
+  confirmRow: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md,
+    backgroundColor: Colors.errorBg,
+    borderTopWidth: 1, borderTopColor: Colors.error + '33',
+  },
+  confirmText: { flex: 1, fontSize: 13, fontWeight: '600', color: Colors.error },
+  confirmNoBtn: {
+    paddingHorizontal: Spacing.md, paddingVertical: 7,
+    borderRadius: Radius.md, borderWidth: 1,
+    borderColor: Colors.glass.border, backgroundColor: Colors.background.primary,
+  },
+  confirmNoText: { fontSize: 13, fontWeight: '600', color: Colors.text.secondary },
+  confirmYesBtn: {
+    paddingHorizontal: Spacing.lg, paddingVertical: 7,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.error, minWidth: 80, alignItems: 'center',
+  },
+  confirmYesText: { fontSize: 13, fontWeight: '700', color: '#fff' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
   modalSheet: {
     backgroundColor: Colors.background.primary,
