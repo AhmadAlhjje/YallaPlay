@@ -75,8 +75,8 @@ export default function TabsLayout() {
 
   if (!isAuthenticated) return <Redirect href="/(auth)/welcome" />;
 
-  const BAR_H  = 58;
-  const BOTTOM = Math.max(insets.bottom, Platform.OS === 'ios' ? 16 : 8);
+  const BAR_H  = 64;
+  const BOTTOM = Math.max(insets.bottom, Platform.OS === 'ios' ? 16 : 10);
 
   return (
     <Tabs
@@ -89,14 +89,15 @@ export default function TabsLayout() {
           left: 16,
           right: 16,
           height: BAR_H,
-          borderRadius: 24,
+          borderRadius: 28,
           borderTopWidth: 0,
           backgroundColor: 'transparent',
           elevation: 0,
+          overflow: 'visible',
         },
         tabBarBackground: () => (
           <View style={[StyleSheet.absoluteFill, {
-            borderRadius: 24,
+            borderRadius: 28,
             backgroundColor: '#FFFFFF',
             shadowColor: '#1A2332',
             shadowOffset: { width: 0, height: 8 },
@@ -111,6 +112,7 @@ export default function TabsLayout() {
           height: BAR_H,
           paddingTop: 0,
           paddingBottom: 0,
+          overflow: 'visible',
         },
       }}
     >
@@ -199,12 +201,12 @@ const styles = StyleSheet.create({
   homeWrap: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -14,
+    marginTop: -10,
   },
   homeBtnInner: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#9CA3AF',
     alignItems: 'center',
     justifyContent: 'center',

@@ -4,12 +4,11 @@ import {
   ForbiddenException,
   BadRequestException,
 } from '@nestjs/common';
-import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
+import { InjectModel, InjectConnection } from '@nestjs/mongoose';
+import { Model, Types, Connection } from 'mongoose';
 import { Facility, FacilityDocument } from '../../database/schemas/facility.mongoose-schema';
 import { Booking, BookingDocument } from '../../database/schemas/booking.mongoose-schema';
 import { Rating, RatingDocument } from '../../database/schemas/rating.mongoose-schema';
-import { Offer, OfferDocument } from '../../database/schemas/offer.mongoose-schema';
 import {
   CreateFacilityDtoType,
   UpdateFacilityDtoType,
@@ -24,7 +23,7 @@ export class FacilitiesService {
     @InjectModel(Facility.name) private facilityModel: Model<FacilityDocument>,
     @InjectModel(Booking.name) private bookingModel: Model<BookingDocument>,
     @InjectModel(Rating.name) private ratingModel: Model<RatingDocument>,
-    @InjectModel(Offer.name) private offerModel: Model<OfferDocument>,
+    @InjectConnection() private connection: Connection,
   ) {}
 
   // ─── Owner CRUD ────────────────────────────────────────────────────────────
@@ -284,15 +283,14 @@ export class FacilitiesService {
     return slotMinutes <= nowMinutes;
   }
 
-  private async getActiveOffersForDate(facilityId: string, date: string): Promise<OfferDocument[]> {
-    return this.offerModel
-      .find({
-        facilityId: new Types.ObjectId(facilityId),
-        date,
-        isActive: true,
-        expiresAt: { $gt: new Date() },
-      })
-      .lean() as unknown as OfferDocument[];
+  private async getActiveOffersForDate(facilityId: string, date: string): Promise<any[]> {
+    const OfferModel = this.connection.model('Offer');
+    return OfferModel.find({
+      facilityId: new Types.ObjectId(facilityId),
+      date,
+      isActive: true,
+      expiresAt: { $gt: new Date() },
+    }).lean();
   }
 
   // ─── Rating ────────────────────────────────────────────────────────────────
