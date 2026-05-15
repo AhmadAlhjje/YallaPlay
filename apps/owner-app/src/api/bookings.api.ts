@@ -18,4 +18,15 @@ export const bookingsApi = {
 
   cancel: (id: string, reason: string) =>
     apiClient.delete(`/bookings/${id}`, { data: { reason } }),
+
+  ownerCreate: (dto: {
+    facilityId: string;
+    date: string;
+    startTime: string;
+    sport?: string;
+    guestName: string;
+    guestPhone?: string;
+    depositPaid?: number;
+    notes?: string;
+  }) => apiClient.post<{ data: any }>('/bookings/owner-add', dto),
 };

@@ -77,6 +77,14 @@ export class BookingsController {
 
   // ─── Owner endpoints ───────────────────────────────────────────────────────
 
+  @Post('owner-add')
+  @UseGuards(RolesGuard)
+  @Roles('owner')
+  @ApiOperation({ summary: '[Owner] Add a manual (walk-in) booking, confirmed immediately' })
+  ownerAdd(@CurrentUser() user: JwtPayloadType, @Body() dto: any) {
+    return this.bookingsService.ownerAddBooking(user.sub, dto);
+  }
+
   @Post('confirm-qr')
   @UseGuards(RolesGuard)
   @Roles('owner')

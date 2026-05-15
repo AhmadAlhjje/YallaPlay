@@ -350,6 +350,63 @@ export class BookingsService {
     };
   }
 
+  // ─── Owner: Add manual (walk-in) booking ─────────────────────────────────
+
+  async ownerAddBooking(
+    ownerId: string,
+    dto: {
+      facilityId: string;
+      date: string;
+      startTime: string;
+      sport?: string;
+      guestName: string;
+      guestPhone?: string;
+      depositPaid?: number;
+      notes?: string;
+    },
+  ): Promise<BookingDocument> {
+    const facility = await this.facilitiesService.findOneAndAssertOwner(dto.facilityId, ownerId);
+
+    const today = new Date().toISOString().split('T')[0];
+    if (dto.date < today) throw new BadRequestException('لا يمكن الحجز في تاريخ سابق.');
+
+    const sport = dto.sport ?? facility.sports[0];
+    if (!facility.sports.includes(sport)) {
+      throw new BadRequestException(`الملعب لا يوفر هذه الرياضة.`);
+    }
+
+    const endTime = this.calculateEndTime(dto.startTime, facility.slotDurationMinutes);
+    const price = await this.resolvePrice(dto.facilityId, dto.date, dto.startTime, facility.pricePerSlot);
+
+    try {
+      const booking = await this.bookingModel.create({
+        facilityId: new Types.ObjectId(dto.facilityId),
+        userId: new Types.ObjectId(ownerId),
+        sport,
+        date: dto.date,
+        startTime: dto.startTime,
+        endTime,
+        status: 'confirmed',
+        paymentMethod: 'cash',
+        paymentStatus: 'paid',
+        totalPrice: price.final,
+        discountApplied: 0,
+        confirmedAt: new Date(),
+        guestName: dto.guestName,
+        guestPhone: dto.guestPhone ?? null,
+        depositPaid: dto.depositPaid ?? 0,
+        source: 'owner',
+      });
+
+      await this.facilitiesService.incrementBookingCount(dto.facilityId);
+      this.logger.log(`Owner walk-in booking: ${booking._id} | Owner: ${ownerId}`);
+      return booking;
+    } catch (error: any) {
+      if (error?.code === 11000) throw new ConflictException('هذا الوقت محجوز بالفعل. اختر وقتاً آخر.');
+      throw error;
+    }
+  }
+
   // ─── Track WhatsApp share ──────────────────────────────────────────────────
 
   async markSharedViaWhatsapp(bookingId: string, userId: string): Promise<void> {

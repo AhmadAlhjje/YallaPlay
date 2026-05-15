@@ -68,6 +68,20 @@ export class Booking {
   @Prop({ type: String })
   paymentScreenshot?: string;
 
+  // Walk-in / owner-added bookings
+  @Prop({ type: String })
+  guestName?: string;
+
+  @Prop({ type: String })
+  guestPhone?: string;
+
+  @Prop({ type: Number, default: 0 })
+  depositPaid?: number;
+
+  // 'app' = booked by athlete via app, 'owner' = added manually by owner
+  @Prop({ type: String, enum: ['app', 'owner'], default: 'app' })
+  source?: string;
+
   // TTL: MongoDB auto-deletes abandoned pending_payment bookings after 15 min
   @Prop()
   expiresAt?: Date;

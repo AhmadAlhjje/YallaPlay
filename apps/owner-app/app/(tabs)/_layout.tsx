@@ -46,28 +46,6 @@ function TabIcon({
   );
 }
 
-// ─── Center Scanner Button ────────────────────────────────────────────────────
-function ScannerIcon({ focused }: { focused: boolean }) {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    Animated.spring(scale, {
-      toValue: focused ? 1.05 : 1,
-      useNativeDriver: true,
-      tension: 200,
-      friction: 10,
-    }).start();
-  }, [focused]);
-
-  return (
-    <View style={styles.centerWrap}>
-      <Animated.View style={[styles.centerBtnInner, focused && styles.centerBtnInnerActive, { transform: [{ scale }] }]}>
-        <Ionicons name={focused ? 'qr-code' : 'qr-code-outline'} size={22} color="#fff" />
-      </Animated.View>
-    </View>
-  );
-}
-
 // ─── Layout ───────────────────────────────────────────────────────────────────
 export default function OwnerTabsLayout() {
   const { isAuthenticated, isLoading } = useAuthStore();
@@ -135,11 +113,11 @@ export default function OwnerTabsLayout() {
         }}
       />
 
-      {/* مسح QR — center elevated */}
+      {/* إضافة حجز — center elevated, opens modal, not a real tab */}
       <Tabs.Screen
         name="scanner"
         options={{
-          tabBarIcon: ({ focused }) => <ScannerIcon focused={focused} />,
+          href: null,
         }}
       />
 
@@ -197,30 +175,4 @@ const styles = StyleSheet.create({
     letterSpacing: 0.1,
   },
 
-  // Scanner center button
-  centerWrap: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: -14,
-  },
-  centerBtnInner: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#9CA3AF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#6B7280',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 7,
-  },
-  centerBtnInnerActive: {
-    backgroundColor: Colors.brand.primary,
-    shadowColor: Colors.brand.primary,
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 10,
-  },
 });

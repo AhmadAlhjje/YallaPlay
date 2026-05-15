@@ -38,6 +38,7 @@ export default function RootLayout() {
             <Stack.Screen name="facility/new" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="facility/[id]" options={{ animation: 'slide_from_right' }} />
             <Stack.Screen name="offers" options={{ animation: 'slide_from_right' }} />
+            <Stack.Screen name="booking/add" options={{ animation: 'slide_from_bottom', presentation: 'modal' }} />
           </Stack>
         </QueryClientProvider>
       </SafeAreaProvider>
