@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { bookingsApi } from '../../src/api/bookings.api';
@@ -31,6 +31,8 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled:        Colors.error,
   no_show:          Colors.text.tertiary,
 };
+
+const STATUS_KEYS = ['pending_payment', 'awaiting_payment', 'confirmed', 'cancelled', 'completed'] as const;
 
 const STATUS_FILTERS = [
   { key: 'all',              label: 'الكل',              icon: '📋', color: Colors.brand.primary },
@@ -83,6 +85,21 @@ export default function OwnerBookingsTab() {
 
   const activeFacilityId = selectedFacility ?? facilities[0]?._id;
 
+  // ── Status counts (all dates, one query per status) ──
+  const countQueries = useQueries({
+    queries: STATUS_KEYS.map((status) => ({
+      queryKey: ['status-count', activeFacilityId, status],
+      queryFn: () => bookingsApi.getFacilityBookings(activeFacilityId!, { status, page: 1 }),
+      enabled: !!activeFacilityId,
+      staleTime: 60_000,
+    })),
+  });
+  const statusCounts: Record<string, number> = {};
+  STATUS_KEYS.forEach((key, i) => {
+    statusCounts[key] = countQueries[i].data?.data?.data?.pagination?.total ?? 0;
+  });
+  const totalAllCount = STATUS_KEYS.reduce((sum, k) => sum + (statusCounts[k] ?? 0), 0);
+
   // ── Schedule data ──
   const { data: slotsRes, isLoading: slotsLoading } = useQuery({
     queryKey: ['facility-slots', activeFacilityId, scheduleDate],
@@ -108,6 +125,16 @@ export default function OwnerBookingsTab() {
 
   const pendingCount = dayBookings.filter(b => b.status === 'pending_payment').length;
 
+  // When a status filter is active, fetch ALL bookings with that status across all dates
+  const showingAllDates = statusFilter !== 'all';
+  const { data: allStatusRes, isLoading: allStatusLoading } = useQuery({
+    queryKey: ['all-status-bookings', activeFacilityId, statusFilter],
+    queryFn: () => bookingsApi.getFacilityBookings(activeFacilityId!, { status: statusFilter, page: 1 }),
+    enabled: !!activeFacilityId && showingAllDates,
+    staleTime: 30_000,
+  });
+  const allStatusBookings: any[] = allStatusRes?.data?.data?.bookings ?? [];
+
   const filteredSchedule = useMemo(() => {
     if (statusFilter === 'all') return schedule;
     return schedule.filter(s => s.booking?.status === statusFilter);
@@ -121,6 +148,7 @@ export default function OwnerBookingsTab() {
       qc.invalidateQueries({ queryKey: ['schedule-bookings'] });
       qc.invalidateQueries({ queryKey: ['facility-slots'] });
       qc.invalidateQueries({ queryKey: ['today-bookings'] });
+      qc.invalidateQueries({ queryKey: ['all-status-bookings'] });
       setDetailBooking(null);
     },
     onError: (err: any) => Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر التأكيد'),
@@ -133,6 +161,7 @@ export default function OwnerBookingsTab() {
       qc.invalidateQueries({ queryKey: ['schedule-bookings'] });
       qc.invalidateQueries({ queryKey: ['facility-slots'] });
       qc.invalidateQueries({ queryKey: ['today-bookings'] });
+      qc.invalidateQueries({ queryKey: ['all-status-bookings'] });
       setDetailBooking(null);
     },
     onError: (err: any) => Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر الإلغاء'),
@@ -228,9 +257,7 @@ export default function OwnerBookingsTab() {
         >
           {STATUS_FILTERS.map((f) => {
             const active = statusFilter === f.key;
-            const count = f.key === 'all'
-              ? dayBookings.length
-              : dayBookings.filter(b => b.status === f.key).length;
+            const count = f.key === 'all' ? totalAllCount : (statusCounts[f.key] ?? 0);
             return (
               <TouchableOpacity
                 key={f.key}
@@ -255,40 +282,66 @@ export default function OwnerBookingsTab() {
         </ScrollView>
       </View>
 
-      {/* ══ Slot timeline ══════════════════════════════════════════ */}
-      {isLoading ? (
-        <View style={styles.loadingWrap}>
-          <ActivityIndicator color={Colors.brand.primary} size="large" />
-          <Text style={styles.loadingText}>جاري التحميل...</Text>
-        </View>
-      ) : allSlots.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={{ fontSize: 48 }}>🏟️</Text>
-          <Text style={styles.emptyTitle}>لا توجد أوقات في هذا اليوم</Text>
-          <Text style={styles.emptySubtitle}>قد يكون الملعب مغلقاً أو لم تُضبط ساعات العمل</Text>
-        </View>
-      ) : filteredSchedule.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={{ fontSize: 48 }}>📋</Text>
-          <Text style={styles.emptyTitle}>لا توجد حجوزات بهذه الحالة</Text>
-          <Text style={styles.emptySubtitle}>جرّب تغيير الفلتر لعرض حجوزات أخرى</Text>
-        </View>
+      {/* ══ Content: day schedule OR all-dates filtered list ══════ */}
+      {showingAllDates ? (
+        // ── All-dates view for a specific status ──
+        allStatusLoading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator color={Colors.brand.primary} size="large" />
+            <Text style={styles.loadingText}>جاري التحميل...</Text>
+          </View>
+        ) : allStatusBookings.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={{ fontSize: 48 }}>📋</Text>
+            <Text style={styles.emptyTitle}>لا توجد حجوزات بهذه الحالة</Text>
+            <Text style={styles.emptySubtitle}>لا يوجد أي حجز بهذه الحالة في جميع الأيام</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={allStatusBookings}
+            keyExtractor={(b) => b._id}
+            contentContainerStyle={styles.timeline}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <BookingListRow
+                booking={item}
+                onPress={() => setDetailBooking(item)}
+                onConfirm={() => handleConfirmRow(item)}
+                isConfirming={confirmMutation.isPending}
+              />
+            )}
+          />
+        )
       ) : (
-        <FlatList
-          data={filteredSchedule}
-          keyExtractor={(s) => s.startTime}
-          contentContainerStyle={styles.timeline}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <ScheduleRow
-              slot={item}
-              onPressDetail={() => item.booking && setDetailBooking(item.booking)}
-              onPressAdd={() => router.push('/booking/add')}
-              onConfirm={() => handleConfirmRow(item.booking)}
-              isConfirming={confirmMutation.isPending}
-            />
-          )}
-        />
+        // ── Day schedule view ──
+        isLoading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator color={Colors.brand.primary} size="large" />
+            <Text style={styles.loadingText}>جاري التحميل...</Text>
+          </View>
+        ) : allSlots.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={{ fontSize: 48 }}>🏟️</Text>
+            <Text style={styles.emptyTitle}>لا توجد أوقات في هذا اليوم</Text>
+            <Text style={styles.emptySubtitle}>قد يكون الملعب مغلقاً أو لم تُضبط ساعات العمل</Text>
+          </View>
+        ) : (
+          <FlatList
+            data={filteredSchedule}
+            keyExtractor={(s) => s.startTime}
+            contentContainerStyle={styles.timeline}
+            showsVerticalScrollIndicator={false}
+            renderItem={({ item }) => (
+              <ScheduleRow
+                slot={item}
+                onPressDetail={() => item.booking && setDetailBooking(item.booking)}
+                onPressAdd={() => router.push('/booking/add')}
+                onConfirm={() => handleConfirmRow(item.booking)}
+                isConfirming={confirmMutation.isPending}
+              />
+            )}
+          />
+        )
       )}
 
       {/* ══ Booking Detail Bottom Sheet ══════════════════════════════ */}
@@ -435,6 +488,76 @@ function TimeBlock({ start, end, color }: { start: string; end: string; color?: 
       <Text style={[styles.timeStart, color && { color }]}>{formatTime12h(start)}</Text>
       <Text style={styles.timeEnd}>{formatTime12h(end)}</Text>
     </View>
+  );
+}
+
+// ─── Booking List Row (all-dates filtered view) ───────────────────────────────
+
+function BookingListRow({
+  booking, onPress, onConfirm, isConfirming,
+}: {
+  booking: any; onPress: () => void; onConfirm: () => void; isConfirming: boolean;
+}) {
+  const statusColor = STATUS_COLORS[booking.status] ?? Colors.text.tertiary;
+  const isPending   = booking.status === 'pending_payment';
+  const displayName = booking.guestName ?? booking.user?.name ?? 'لاعب';
+  const displayPhone = booking.guestPhone ?? booking.user?.phone;
+
+  return (
+    <TouchableOpacity
+      style={[styles.row, styles.rowBooked, isPending && styles.rowPending]}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      {/* Date + time column */}
+      <View style={styles.listDateBlock}>
+        <Text style={styles.listDate}>{booking.date}</Text>
+        <Text style={[styles.timeStart, { color: statusColor }]}>{formatTime12h(booking.startTime)}</Text>
+        <Text style={styles.timeEnd}>{formatTime12h(booking.endTime)}</Text>
+      </View>
+
+      {/* Player info */}
+      <View style={{ flex: 1 }}>
+        <View style={styles.playerRow}>
+          <Text style={styles.playerName} numberOfLines={1}>{displayName}</Text>
+          {booking.source === 'owner' && (
+            <View style={styles.manualBadge}>
+              <Text style={styles.manualBadgeText}>يدوي</Text>
+            </View>
+          )}
+        </View>
+        {displayPhone && (
+          <Text style={styles.playerPhone} numberOfLines={1}>{displayPhone}</Text>
+        )}
+        <View style={styles.bookingMeta}>
+          <Text style={styles.bookingPrice}>{booking.totalPrice ?? 0} ل.س</Text>
+          <View style={[styles.statusBadge, { backgroundColor: statusColor + '22' }]}>
+            <Text style={[styles.statusBadgeText, { color: statusColor }]}>
+              {STATUS_LABELS[booking.status] ?? booking.status}
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      {/* Confirm or chevron */}
+      {isPending ? (
+        <TouchableOpacity
+          style={styles.confirmBtn}
+          onPress={(e) => { e.stopPropagation?.(); onConfirm(); }}
+          disabled={isConfirming}
+        >
+          {isConfirming
+            ? <ActivityIndicator size="small" color="#fff" />
+            : <>
+                <Ionicons name="checkmark" size={16} color="#fff" />
+                <Text style={styles.confirmBtnText}>تأكيد</Text>
+              </>
+          }
+        </TouchableOpacity>
+      ) : (
+        <Ionicons name="chevron-forward" size={16} color={Colors.text.tertiary} />
+      )}
+    </TouchableOpacity>
   );
 }
 
@@ -650,6 +773,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0FDF4',
     borderColor: '#BBF7D0',
   },
+
+  // List date block (all-dates view)
+  listDateBlock: {
+    width: 68, alignItems: 'center',
+    borderLeftColor: Colors.border.default,
+    borderLeftWidth: 3,
+    paddingRight: Spacing.sm,
+  },
+  listDate: { fontSize: 10, color: Colors.text.tertiary, marginBottom: 2 },
 
   // Time block
   timeBlock: {
