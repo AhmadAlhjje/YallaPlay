@@ -60,6 +60,18 @@ export class NotificationsProcessor {
     });
   }
 
+  @Process('new_booking')
+  async onNewBooking(job: Job) {
+    const { ownerId, facilityName, date, startTime, userName } = job.data;
+    await this.notificationsService.sendPush({
+      userId: ownerId,
+      type: 'new_booking',
+      title: '📋 حجز جديد',
+      body: `طلب ${userName} حجزاً في ${facilityName} بتاريخ ${date} الساعة ${startTime}. راجع الحجز وأكّده.`,
+      data: { bookingId: job.data.bookingId, screen: 'OwnerBookings' },
+    });
+  }
+
   @Process('payment_submitted')
   async onPaymentSubmitted(job: Job) {
     const { ownerId, facilityName, date, startTime, userName } = job.data;

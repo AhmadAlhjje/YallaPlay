@@ -10,6 +10,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { analyticsApi } from '../../src/api/analytics.api';
 import { facilitiesApi } from '../../src/api/facilities.api';
 import { bookingsApi } from '../../src/api/bookings.api';
+import { notificationsApi } from '../../src/api/notifications.api';
 import { GlassCard } from '../../src/components/GlassCard';
 import { useAuthStore } from '../../src/store/auth.store';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
@@ -67,6 +68,14 @@ export default function DashboardTab() {
 
   const activeFacilityId = selectedFacility ?? facilities[0]?._id;
 
+  const { data: notifRes } = useQuery({
+    queryKey: ['owner-notifications-unread'],
+    queryFn: () => notificationsApi.getInbox(1),
+    staleTime: 60_000,
+    refetchInterval: 60_000,
+  });
+  const unreadCount: number = notifRes?.data?.data?.unreadCount ?? 0;
+
   const { data: summaryRes, isLoading: summaryLoading, refetch } = useQuery({
     queryKey: ['owner-summary', selectedFacility],
     queryFn: () => analyticsApi.getSummary(selectedFacility),
@@ -108,23 +117,29 @@ export default function DashboardTab() {
                 </Text>
                 <Text style={styles.bannerDate}>{todayLabel()}</Text>
               </View>
-              <TouchableOpacity onPress={() => router.push('/offers')} style={styles.offersBtn}>
-                <Text style={{ fontSize: 18 }}>⚡</Text>
-                <Text style={styles.offersBtnText}>عروض</Text>
-              </TouchableOpacity>
+              <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                <TouchableOpacity onPress={() => router.push('/notifications')} style={styles.bellBtn}>
+                  <Ionicons name="notifications-outline" size={20} color="#fff" />
+                  {unreadCount > 0 && (
+                    <View style={styles.bellBadge}>
+                      <Text style={styles.bellBadgeText}>
+                        {unreadCount > 9 ? '9+' : unreadCount}
+                      </Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => router.push('/offers')} style={styles.offersBtn}>
+                  <Text style={{ fontSize: 18 }}>⚡</Text>
+                  <Text style={styles.offersBtnText}>عروض</Text>
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* Stat pills inside banner */}
             <View style={styles.bannerStats}>
               <BannerStat
-                label="إيرادات اليوم"
-                value={`${(summary?.today?.revenue ?? 0).toLocaleString()}`}
-                unit="ل.س"
-              />
-              <View style={styles.bannerStatDivider} />
-              <BannerStat
                 label="حجوزات اليوم"
-                value={`${summary?.today?.bookings ?? todayBookings.length}`}
+                value={`${todayBookings.length}`}
                 unit="حجز"
               />
               <View style={styles.bannerStatDivider} />
@@ -133,6 +148,12 @@ export default function DashboardTab() {
                 value={`${pendingCount}`}
                 unit=""
                 warn={pendingCount > 0}
+              />
+              <View style={styles.bannerStatDivider} />
+              <BannerStat
+                label="حجوزات الشهر"
+                value={`${summary?.thisMonth?.bookings ?? 0}`}
+                unit="حجز"
               />
             </View>
           </SafeAreaView>
@@ -167,18 +188,16 @@ export default function DashboardTab() {
           <View style={styles.monthRow}>
             <MonthCard
               icon="📅"
-              label="إيرادات الشهر"
-              value={(summary?.thisMonth?.revenue ?? 0).toLocaleString()}
-              unit="ل.س"
-              sub={`${summary?.thisMonth?.bookings ?? 0} حجز`}
+              label="حجوزات هذا الشهر"
+              value={`${summary?.thisMonth?.bookings ?? 0}`}
+              unit="حجز"
               color={Colors.brand.primary}
             />
             <MonthCard
               icon="📈"
-              label="إجمالي الإيرادات"
-              value={(summary?.allTime?.revenue ?? 0).toLocaleString()}
-              unit="ل.س"
-              sub={`${summary?.allTime?.bookings ?? 0} حجز`}
+              label="إجمالي الحجوزات"
+              value={`${summary?.allTime?.bookings ?? 0}`}
+              unit="حجز"
               color={Colors.info}
             />
           </View>
@@ -351,8 +370,8 @@ function FacilityChip({ label, active, onPress }: { label: string; active: boole
   );
 }
 
-function MonthCard({ icon, label, value, unit, sub, color }: {
-  icon: string; label: string; value: string; unit: string; sub: string; color: string;
+function MonthCard({ icon, label, value, unit, color }: {
+  icon: string; label: string; value: string; unit: string; color: string;
 }) {
   return (
     <GlassCard style={[styles.monthCard, { borderColor: color + '33' }]}>
@@ -362,7 +381,6 @@ function MonthCard({ icon, label, value, unit, sub, color }: {
         <Text style={[Typography.labelSm, { color: Colors.text.tertiary }]}> {unit}</Text>
       </View>
       <Text style={[Typography.labelSm, { color: Colors.text.secondary, marginTop: 2 }]}>{label}</Text>
-      <Text style={[Typography.bodySm, { color: Colors.text.tertiary }]}>{sub}</Text>
     </GlassCard>
   );
 }
@@ -431,6 +449,22 @@ const styles = StyleSheet.create({
   bannerGreeting: { fontSize: 13, color: 'rgba(255,255,255,0.75)', fontWeight: '500' },
   bannerName: { fontSize: 26, fontWeight: '800', color: '#fff', marginTop: 2 },
   bannerDate: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 2 },
+  bellBtn: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)',
+    alignItems: 'center', justifyContent: 'center',
+    position: 'relative',
+  },
+  bellBadge: {
+    position: 'absolute', top: -4, right: -4,
+    minWidth: 18, height: 18, borderRadius: 9,
+    backgroundColor: Colors.error,
+    alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 3,
+    borderWidth: 1.5, borderColor: Colors.brand.primary,
+  },
+  bellBadgeText: { fontSize: 9, fontWeight: '800', color: '#fff' },
   offersBtn: {
     alignItems: 'center', paddingHorizontal: 14, paddingVertical: 8,
     backgroundColor: 'rgba(255,255,255,0.2)',

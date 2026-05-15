@@ -1,15 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator,
+  Modal, TextInput, KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
-import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { plansApi } from '../../src/api/plans.api';
 import { analyticsApi } from '../../src/api/analytics.api';
+import { authApi } from '../../src/api/auth.api';
 import { useAuthStore } from '../../src/store/auth.store';
 import { GlassCard } from '../../src/components/GlassCard';
+import { PrimaryButton } from '../../src/components/PrimaryButton';
 import { Colors, Typography, Spacing, Radius } from '../../src/theme';
 
 const PLAN_ICONS: Record<string, string>  = { free: '🌱', primer: '⚡', pro: '🏆' };
@@ -23,17 +26,17 @@ const PLAN_COLORS: Record<string, string> = {
 export default function OwnerProfileTab() {
   const { owner, logout } = useAuthStore();
   const qc = useQueryClient();
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [oldPassword, setOldPassword]             = useState('');
+  const [newPassword, setNewPassword]             = useState('');
+  const [confirmPassword, setConfirmPassword]     = useState('');
+  const [showOld, setShowOld]                     = useState(false);
+  const [showNew, setShowNew]                     = useState(false);
 
   const { data: planStatusRes, isLoading: planLoading } = useQuery({
     queryKey: ['my-plan-status'],
     queryFn: () => plansApi.getMyStatus(),
     staleTime: 300_000,
-  });
-
-  const { data: publicPlansRes } = useQuery({
-    queryKey: ['public-plans'],
-    queryFn: () => plansApi.getPublic(),
-    staleTime: 600_000,
   });
 
   const { data: summaryRes } = useQuery({
@@ -47,208 +50,309 @@ export default function OwnerProfileTab() {
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       qc.invalidateQueries({ queryKey: ['my-plan-status'] });
-      Alert.alert('تم الترقية! 🎉', 'تمت ترقية خطتك بنجاح. استمتع بالمميزات الجديدة.');
+      Alert.alert('تم الترقية! 🎉', 'تمت ترقية خطتك بنجاح.');
     },
     onError: (err: any) => Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر الترقية'),
   });
 
+  const changePasswordMutation = useMutation({
+    mutationFn: () => authApi.changePassword(oldPassword, newPassword),
+    onSuccess: () => {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      setShowPasswordModal(false);
+      setOldPassword(''); setNewPassword(''); setConfirmPassword('');
+      Alert.alert('تم التغيير', 'تم تغيير كلمة المرور بنجاح.');
+    },
+    onError: (err: any) => Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر تغيير كلمة المرور'),
+  });
+
+  const handleChangePassword = () => {
+    if (!oldPassword || !newPassword || !confirmPassword)
+      return Alert.alert('تنبيه', 'يرجى ملء جميع الحقول.');
+    if (newPassword.length < 6)
+      return Alert.alert('تنبيه', 'كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل.');
+    if (newPassword !== confirmPassword)
+      return Alert.alert('تنبيه', 'كلمة المرور الجديدة وتأكيدها غير متطابقتين.');
+    changePasswordMutation.mutate();
+  };
+
+  const handleLogout = () => {
+    Alert.alert('تسجيل الخروج', 'هل أنت متأكد؟', [
+      { text: 'إلغاء', style: 'cancel' },
+      {
+        text: 'تسجيل الخروج',
+        style: 'destructive',
+        onPress: () => logout(),
+      },
+    ]);
+  };
+
+  const handleSupport = () => {
+    const number = process.env.EXPO_PUBLIC_SUPPORT_WHATSAPP ?? '963998107722';
+    Linking.openURL(`https://wa.me/${number}`).catch(() =>
+      Alert.alert('تنبيه', 'تعذّر فتح واتساب')
+    );
+  };
+
   const planStatus  = planStatusRes?.data?.data;
-  const publicPlans: any[] = publicPlansRes?.data?.data ?? [];
   const summary     = summaryRes?.data?.data;
   const currentPlan = owner?.plan ?? 'free';
   const planColor   = PLAN_COLORS[currentPlan] ?? Colors.text.tertiary;
   const initials    = (owner?.name ?? 'مالك').split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase();
 
-  const handleLogout = () => {
-    Alert.alert('تسجيل الخروج', 'هل أنت متأكد من تسجيل الخروج؟', [
-      { text: 'إلغاء', style: 'cancel' },
-      {
-        text: 'تسجيل الخروج',
-        style: 'destructive',
-        onPress: async () => { await logout(); router.replace('/(auth)/welcome'); },
-      },
-    ]);
-  };
-
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        <SafeAreaView>
-          {/* Hero */}
-          <View style={styles.hero}>
-            <View style={styles.avatar}>
-              <Text style={{ color: '#fff', fontSize: 28, fontWeight: '800' }}>{initials}</Text>
+        {/* ── Header Banner ─────────────────────────────────────────── */}
+        <View style={styles.banner}>
+          <SafeAreaView>
+            <View style={styles.bannerContent}>
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>{initials}</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.ownerName}>{owner?.name ?? 'مالك'}</Text>
+                <Text style={styles.ownerPhone}>{owner?.phone}</Text>
+                <View style={[styles.planBadge, { borderColor: planColor + '55', backgroundColor: planColor + '22' }]}>
+                  <Text style={{ fontSize: 13 }}>{PLAN_ICONS[currentPlan]}</Text>
+                  <Text style={[styles.planBadgeText, { color: planColor }]}>
+                    خطة {PLAN_NAMES[currentPlan] ?? currentPlan}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <Text style={[Typography.h2, { color: Colors.text.primary, marginTop: Spacing.md }]}>
-              {owner?.name}
-            </Text>
-            <Text style={[Typography.bodyMd, { color: Colors.text.tertiary }]}>{owner?.phone}</Text>
-            <View style={[styles.planBadge, { borderColor: planColor + '55', backgroundColor: planColor + '15' }]}>
-              <Text style={{ fontSize: 16 }}>{PLAN_ICONS[currentPlan]}</Text>
-              <Text style={[Typography.labelMd, { color: planColor }]}>
-                خطة {PLAN_NAMES[currentPlan] ?? currentPlan}
-              </Text>
-            </View>
-            {planStatus?.planExpiresAt && (
-              <Text style={[Typography.bodySm, { color: Colors.text.tertiary, marginTop: 4 }]}>
-                تنتهي: {new Date(planStatus.planExpiresAt).toLocaleDateString('ar-SA')}
-              </Text>
-            )}
+          </SafeAreaView>
+        </View>
+
+        <View style={styles.body}>
+          {/* ── Stats Row ────────────────────────────────────────────── */}
+          <View style={styles.statsRow}>
+            <StatBox
+              icon="calendar-outline"
+              label="إجمالي الحجوزات"
+              value={`${summary?.allTime?.bookings ?? 0}`}
+            />
+            <View style={styles.statDivider} />
+            <StatBox
+              icon="storefront-outline"
+              label="عدد الملاعب"
+              value={`${summary?.facilityCount ?? 0}`}
+            />
+            <View style={styles.statDivider} />
+            <StatBox
+              icon="calendar-number-outline"
+              label="حجوزات الشهر"
+              value={`${summary?.thisMonth?.bookings ?? 0}`}
+            />
           </View>
 
-          <View style={styles.body}>
-            {/* Stats */}
-            <View style={styles.statsRow}>
-              <StatBox icon="💰" label="إجمالي الإيرادات" value={`${summary?.allTime?.revenue ?? 0}`} unit="ل.س" />
-              <View style={styles.statDivider} />
-              <StatBox icon="📋" label="إجمالي الحجوزات" value={`${summary?.allTime?.bookings ?? 0}`} unit="" />
-              <View style={styles.statDivider} />
-              <StatBox icon="🏟️" label="عدد الملاعب" value={`${summary?.facilityCount ?? 0}`} unit="" />
-            </View>
-
-            {/* Current plan features */}
-            {planLoading ? (
-              <ActivityIndicator color={Colors.brand.primary} style={{ marginVertical: Spacing.xl }} />
-            ) : planStatus ? (
-              <>
-                <SectionTitle title="خطتك الحالية" />
-                <GlassCard style={[styles.planCard, { borderColor: planColor + '44', borderWidth: 2 }]}>
-                  <View style={styles.planHeader}>
-                    <Text style={{ fontSize: 32 }}>{PLAN_ICONS[currentPlan]}</Text>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[Typography.h3, { color: planColor }]}>
-                        خطة {PLAN_NAMES[currentPlan] ?? currentPlan}
+          {/* ── Current Plan ──────────────────────────────────────────── */}
+          {planLoading ? (
+            <ActivityIndicator color={Colors.brand.primary} style={{ marginVertical: Spacing.xl }} />
+          ) : planStatus ? (
+            <>
+              <SectionLabel title="خطتك الحالية" />
+              <GlassCard style={[styles.planCard, { borderColor: planColor + '44' }]}>
+                <View style={styles.planHeader}>
+                  <Text style={{ fontSize: 28 }}>{PLAN_ICONS[currentPlan]}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[Typography.labelLg, { color: planColor }]}>
+                      خطة {PLAN_NAMES[currentPlan] ?? currentPlan}
+                    </Text>
+                    {planStatus?.planExpiresAt && (
+                      <Text style={[Typography.bodySm, { color: Colors.text.tertiary, marginTop: 2 }]}>
+                        تنتهي: {new Date(planStatus.planExpiresAt).toLocaleDateString('ar-SA')}
                       </Text>
-                    </View>
+                    )}
                   </View>
-                  <View style={{ marginTop: Spacing.md, gap: Spacing.sm }}>
-                    <FeatureRow label={`حتى ${planStatus.features?.maxFacilities ?? 1} ملاعب`} ok />
-                    <FeatureRow label="إضافة عروض فلاش" ok={planStatus.features?.canAddOffers} />
-                    <FeatureRow label="تحليلات متقدمة" ok={planStatus.features?.hasAnalytics} />
-                    <FeatureRow label="إشعارات فورية للاعبين" ok={planStatus.features?.hasPushNotifications} />
-                  </View>
-                </GlassCard>
-              </>
-            ) : null}
+                </View>
+                <View style={styles.featuresGrid}>
+                  <FeatureChip label={`${planStatus.features?.maxFacilities ?? 1} ملاعب`} ok />
+                  <FeatureChip label="عروض فلاش" ok={planStatus.features?.canAddOffers} />
+                  <FeatureChip label="تحليلات" ok={planStatus.features?.hasAnalytics} />
+                  <FeatureChip label="إشعارات فورية" ok={planStatus.features?.hasPushNotifications} />
+                </View>
+              </GlassCard>
+            </>
+          ) : null}
 
-            {/* Upgrade plans */}
-            {publicPlans.filter((p) => p.tier !== currentPlan).length > 0 && (
-              <>
-                <SectionTitle title="ترقية الخطة" />
-                <Text style={[Typography.bodyMd, { color: Colors.text.tertiary, marginBottom: Spacing.md }]}>
-                  رقّي خطتك للحصول على مزيد من الملاعب والمميزات
-                </Text>
-                {publicPlans
-                  .filter((p) => p.tier !== currentPlan)
-                  .map((plan) => {
-                    const tiers: Record<string, number> = { free: 0, primer: 1, pro: 2 };
-                    const isUpgrade = (tiers[plan.tier] ?? 0) > (tiers[currentPlan] ?? 0);
-                    const color = PLAN_COLORS[plan.tier] ?? Colors.text.secondary;
-                    return (
-                      <GlassCard key={plan._id} style={[styles.upgradePlanCard, { borderColor: color + '44' }]}>
-                        <View style={styles.planHeader}>
-                          <Text style={{ fontSize: 28 }}>{PLAN_ICONS[plan.tier]}</Text>
-                          <View style={{ flex: 1 }}>
-                            <Text style={[Typography.labelLg, { color }]}>{plan.name}</Text>
-                            <Text style={[Typography.bodyMd, { color: Colors.text.secondary }]}>
-                              {plan.price === 0 ? 'مجاني' : `${plan.price} ل.س / شهر`}
-                            </Text>
-                          </View>
-                          {isUpgrade && (
-                            <TouchableOpacity
-                              onPress={() => upgradeMutation.mutate(plan._id)}
-                              disabled={upgradeMutation.isPending}
-                              style={[styles.upgradeBtn, { backgroundColor: color, borderColor: color }]}
-                            >
-                              <Text style={[Typography.labelMd, { color: '#fff' }]}>
-                                {upgradeMutation.isPending ? '...' : 'ترقية'}
-                              </Text>
-                            </TouchableOpacity>
-                          )}
-                        </View>
-                      </GlassCard>
-                    );
-                  })}
-              </>
-            )}
+          {/* ── Settings ─────────────────────────────────────────────── */}
+          <SectionLabel title="الإعدادات" />
+          <GlassCard style={styles.settingsCard}>
+            <SettingRow
+              icon="lock-closed-outline"
+              label="تغيير كلمة المرور"
+              onPress={() => setShowPasswordModal(true)}
+            />
+            <View style={styles.settingDivider} />
+            <SettingRow
+              icon="logo-whatsapp"
+              label="تواصل مع الدعم"
+              onPress={handleSupport}
+            />
+            <View style={styles.settingDivider} />
+            <SettingRow
+              icon="log-out-outline"
+              label="تسجيل الخروج"
+              onPress={handleLogout}
+              danger
+            />
+          </GlassCard>
 
-            {/* Settings */}
-            <SectionTitle title="الإعدادات" />
-            <GlassCard style={styles.settingsCard}>
-              <SettingRow icon="🔔" label="الإشعارات" onPress={() => {}} />
-              <View style={styles.settingDivider} />
-              <SettingRow icon="🔒" label="الأمان" onPress={() => {}} />
-              <View style={styles.settingDivider} />
-              <SettingRow icon="📞" label="تواصل مع الدعم" onPress={() => {}} />
-              <View style={styles.settingDivider} />
-              <SettingRow icon="🚪" label="تسجيل الخروج" onPress={handleLogout} danger />
-            </GlassCard>
-
-            <View style={{ height: 100 }} />
-          </View>
-        </SafeAreaView>
+          <View style={{ height: 100 }} />
+        </View>
       </ScrollView>
+
+      {/* ── Change Password Modal ─────────────────────────────────── */}
+      <Modal visible={showPasswordModal} transparent animationType="slide" onRequestClose={() => setShowPasswordModal(false)}>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowPasswordModal(false)} />
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHandle} />
+              <View style={styles.modalHeader}>
+                <Ionicons name="lock-closed-outline" size={22} color={Colors.brand.primary} />
+                <Text style={[Typography.h3, { color: Colors.text.primary }]}>تغيير كلمة المرور</Text>
+              </View>
+
+              <PasswordField
+                label="كلمة المرور الحالية"
+                value={oldPassword}
+                onChangeText={setOldPassword}
+                show={showOld}
+                onToggleShow={() => setShowOld(!showOld)}
+                placeholder="أدخل كلمة المرور الحالية"
+              />
+              <PasswordField
+                label="كلمة المرور الجديدة"
+                value={newPassword}
+                onChangeText={setNewPassword}
+                show={showNew}
+                onToggleShow={() => setShowNew(!showNew)}
+                placeholder="6 أحرف على الأقل"
+              />
+              <PasswordField
+                label="تأكيد كلمة المرور الجديدة"
+                value={confirmPassword}
+                onChangeText={setConfirmPassword}
+                show={showNew}
+                onToggleShow={() => setShowNew(!showNew)}
+                placeholder="أعد إدخال كلمة المرور الجديدة"
+              />
+
+              <View style={{ marginTop: Spacing.xl }}>
+                <PrimaryButton
+                  label="تغيير كلمة المرور"
+                  onPress={handleChangePassword}
+                  loading={changePasswordMutation.isPending}
+                />
+              </View>
+              <TouchableOpacity
+                onPress={() => { setShowPasswordModal(false); setOldPassword(''); setNewPassword(''); setConfirmPassword(''); }}
+                style={{ alignItems: 'center', marginTop: Spacing.lg, paddingVertical: Spacing.sm }}
+              >
+                <Text style={[Typography.labelMd, { color: Colors.text.tertiary }]}>إلغاء</Text>
+              </TouchableOpacity>
+              <View style={{ height: 20 }} />
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
 
-function SectionTitle({ title }: { title: string }) {
-  return <Text style={[Typography.h3, { color: Colors.text.primary, marginBottom: Spacing.md, marginTop: Spacing.sm }]}>{title}</Text>;
-}
+// ─── Sub-components ───────────────────────────────────────────────────────────
 
-function StatBox({ icon, label, value, unit }: { icon: string; label: string; value: string; unit: string }) {
+function SectionLabel({ title }: { title: string }) {
   return (
-    <View style={{ flex: 1, alignItems: 'center', gap: 4, paddingVertical: Spacing.sm }}>
-      <Text style={{ fontSize: 22 }}>{icon}</Text>
-      <Text style={[Typography.numericMd, { color: Colors.text.primary }]}>
-        {value}{unit ? <Text style={[Typography.labelSm, { color: Colors.text.tertiary }]}> {unit}</Text> : null}
-      </Text>
-      <Text style={[Typography.labelSm, { color: Colors.text.tertiary, textAlign: 'center' }]}>{label}</Text>
-    </View>
+    <Text style={styles.sectionLabel}>{title}</Text>
   );
 }
 
-function FeatureRow({ label, ok }: { label: string; ok?: boolean }) {
+function StatBox({ icon, label, value }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: string }) {
   return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: Spacing.sm }}>
-      <View style={[styles.featureIcon, { backgroundColor: ok ? Colors.successBg : Colors.glass.subtle }]}>
-        <Text style={{ fontSize: 12, color: ok ? Colors.success : Colors.text.tertiary }}>{ok ? '✓' : '✕'}</Text>
-      </View>
-      <Text style={[Typography.bodyMd, { color: ok ? Colors.text.primary : Colors.text.tertiary }]}>{label}</Text>
+    <View style={styles.statBox}>
+      <Ionicons name={icon} size={20} color={Colors.brand.primary} />
+      <Text style={styles.statValue}>{value}</Text>
+      <Text style={styles.statLabel}>{label}</Text>
     </View>
   );
 }
 
-function SettingRow({ icon, label, onPress, danger }: { icon: string; label: string; onPress: () => void; danger?: boolean }) {
+function FeatureChip({ label, ok }: { label: string; ok?: boolean }) {
+  return (
+    <View style={[styles.featureChip, { backgroundColor: ok ? Colors.successBg : Colors.background.secondary, borderColor: ok ? Colors.success + '44' : Colors.glass.border }]}>
+      <Text style={{ fontSize: 11, color: ok ? Colors.success : Colors.text.tertiary }}>{ok ? '✓' : '✕'}</Text>
+      <Text style={[Typography.labelSm, { color: ok ? Colors.success : Colors.text.tertiary }]}>{label}</Text>
+    </View>
+  );
+}
+
+function SettingRow({ icon, label, onPress, danger }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; danger?: boolean }) {
   return (
     <TouchableOpacity onPress={onPress} style={styles.settingRow}>
-      <Text style={{ fontSize: 20 }}>{icon}</Text>
+      <View style={[styles.settingIconWrap, { backgroundColor: danger ? Colors.errorBg : Colors.brand.light }]}>
+        <Ionicons name={icon} size={18} color={danger ? Colors.error : Colors.brand.primary} />
+      </View>
       <Text style={[Typography.bodyMd, { color: danger ? Colors.error : Colors.text.primary, flex: 1 }]}>{label}</Text>
-      <Text style={{ color: Colors.text.tertiary, fontSize: 18 }}>›</Text>
+      <Ionicons name="chevron-forward" size={16} color={Colors.text.tertiary} />
     </TouchableOpacity>
   );
 }
 
+function PasswordField({ label, value, onChangeText, show, onToggleShow, placeholder }: {
+  label: string; value: string; onChangeText: (t: string) => void;
+  show: boolean; onToggleShow: () => void; placeholder: string;
+}) {
+  return (
+    <View style={{ marginBottom: Spacing.md }}>
+      <Text style={styles.fieldLabel}>{label}</Text>
+      <View style={styles.passwordWrap}>
+        <TextInput
+          style={styles.passwordInput}
+          value={value}
+          onChangeText={onChangeText}
+          placeholder={placeholder}
+          placeholderTextColor={Colors.text.tertiary}
+          secureTextEntry={!show}
+          textAlign="right"
+          autoCapitalize="none"
+        />
+        <TouchableOpacity onPress={onToggleShow} style={{ padding: 4 }}>
+          <Ionicons name={show ? 'eye-off-outline' : 'eye-outline'} size={18} color={Colors.text.tertiary} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background.secondary },
 
-  hero: {
-    alignItems: 'center',
-    paddingVertical: Spacing.xl + 8,
-    paddingHorizontal: Spacing.xl,
-    backgroundColor: Colors.brand.primary,
+  banner: { backgroundColor: Colors.brand.primary, paddingBottom: Spacing.xl },
+  bannerContent: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.lg,
+    paddingHorizontal: Spacing.xl, paddingTop: Spacing.lg,
   },
   avatar: {
-    width: 84, height: 84, borderRadius: 42,
+    width: 72, height: 72, borderRadius: 36,
     backgroundColor: 'rgba(255,255,255,0.25)',
     alignItems: 'center', justifyContent: 'center',
-    borderWidth: 3, borderColor: 'rgba(255,255,255,0.5)',
+    borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.5)',
   },
+  avatarText: { color: '#fff', fontSize: 26, fontWeight: '800' },
+  ownerName: { fontSize: 20, fontWeight: '800', color: '#fff' },
+  ownerPhone: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginTop: 2 },
   planBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 6,
-    marginTop: Spacing.md, paddingHorizontal: 14, paddingVertical: 5,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    alignSelf: 'flex-start', marginTop: Spacing.sm,
+    paddingHorizontal: 10, paddingVertical: 4,
     borderRadius: Radius.full, borderWidth: 1,
   },
+  planBadgeText: { fontSize: 12, fontWeight: '700' },
 
   body: { paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl },
 
@@ -260,25 +364,62 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     marginBottom: Spacing.xl,
   },
-  statDivider: { width: 1, backgroundColor: Colors.glass.border },
+  statBox: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: Spacing.sm },
+  statValue: { fontSize: 20, fontWeight: '800', color: Colors.text.primary, fontVariant: ['tabular-nums'] as any },
+  statLabel: { fontSize: 11, color: Colors.text.tertiary, textAlign: 'center' },
+  statDivider: { width: 1, backgroundColor: Colors.glass.border, marginVertical: Spacing.sm },
 
-  planCard:   { padding: Spacing.xl, marginBottom: Spacing.md },
-  planHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md },
-  featureIcon: {
-    width: 22, height: 22, borderRadius: 11,
+  sectionLabel: {
+    fontSize: 13, fontWeight: '700', color: Colors.text.tertiary,
+    marginBottom: Spacing.sm, marginTop: 4,
+  },
+
+  planCard: { padding: Spacing.xl, marginBottom: Spacing.xl, borderWidth: 1.5 },
+  planHeader: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, marginBottom: Spacing.md },
+  featuresGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  featureChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 10, paddingVertical: 5,
+    borderRadius: Radius.full, borderWidth: 1,
+  },
+
+  settingsCard: { overflow: 'hidden', backgroundColor: Colors.background.primary, marginBottom: Spacing.xl },
+  settingRow: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
+    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md + 2,
+  },
+  settingIconWrap: {
+    width: 36, height: 36, borderRadius: Radius.md,
     alignItems: 'center', justifyContent: 'center',
   },
-
-  upgradePlanCard: { padding: Spacing.lg, marginBottom: Spacing.md, borderWidth: 1.5 },
-  upgradeBtn: {
-    paddingHorizontal: Spacing.lg, paddingVertical: 8,
-    borderRadius: Radius.md, borderWidth: 1.5,
-  },
-
-  settingsCard:   { overflow: 'hidden', backgroundColor: Colors.background.primary },
-  settingRow:     {
-    flexDirection: 'row', alignItems: 'center', gap: Spacing.md,
-    paddingHorizontal: Spacing.lg, paddingVertical: Spacing.md + 4,
-  },
   settingDivider: { height: 1, backgroundColor: Colors.glass.border, marginHorizontal: Spacing.lg },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalSheet: {
+    backgroundColor: Colors.background.primary,
+    borderTopLeftRadius: 28, borderTopRightRadius: 28,
+    padding: Spacing.xl, paddingBottom: 0,
+    borderTopWidth: 1, borderTopColor: Colors.glass.border,
+  },
+  modalHandle: {
+    width: 40, height: 4, borderRadius: 2,
+    backgroundColor: Colors.glass.strong,
+    alignSelf: 'center', marginBottom: Spacing.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.sm,
+    marginBottom: Spacing.xl,
+  },
+
+  fieldLabel: { fontSize: 13, fontWeight: '600', color: Colors.text.secondary, marginBottom: 6, textAlign: 'right' },
+  passwordWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.background.secondary,
+    borderRadius: Radius.lg, borderWidth: 1.5, borderColor: Colors.glass.border,
+    paddingHorizontal: Spacing.lg,
+  },
+  passwordInput: {
+    flex: 1, fontSize: 15, color: Colors.text.primary,
+    paddingVertical: 13,
+  },
 });

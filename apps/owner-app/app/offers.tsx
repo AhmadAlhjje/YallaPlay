@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, ActivityIndicator,
-  Modal, ScrollView,
+  Modal, ScrollView, TextInput, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,8 +33,7 @@ function buildDateList(days = 14) {
   return list;
 }
 
-const DATE_LIST    = buildDateList();
-const DISCOUNT_OPTIONS = [10, 15, 20, 25, 30, 40, 50];
+const DATE_LIST = buildDateList();
 
 export default function OffersScreen() {
   const qc = useQueryClient();
@@ -42,7 +41,7 @@ export default function OffersScreen() {
   const [selectedFacility, setSelectedFacility] = useState<string>('');
   const [selectedDate, setSelectedDate]         = useState(DATE_LIST[0].date);
   const [startTime, setStartTime]               = useState('');
-  const [discountPercent, setDiscountPercent]   = useState(20);
+  const [newPrice, setNewPrice]                 = useState('');
 
   const { data: facilitiesData } = useQuery({
     queryKey: ['owner-facilities'],
@@ -50,13 +49,21 @@ export default function OffersScreen() {
     staleTime: 300_000,
   });
 
-  const facilities: any[] = facilitiesData?.data?.data ?? [];
+  const facilitiesPayload = facilitiesData?.data;
+  const facilities: any[] = Array.isArray(facilitiesPayload?.data)
+    ? facilitiesPayload.data
+    : Array.isArray(facilitiesPayload)
+      ? facilitiesPayload
+      : facilitiesPayload?.facilities ?? [];
 
   useEffect(() => {
     if (facilities.length > 0 && !selectedFacility) {
       setSelectedFacility(facilities[0]._id);
     }
   }, [facilities.length]);
+
+  const selectedFacilityObj = facilities.find((f) => f._id === selectedFacility);
+  const originalPrice: number = selectedFacilityObj?.pricePerSlot ?? 0;
 
   const { data: slotsRes, isLoading: slotsLoading } = useQuery({
     queryKey: ['slots', selectedFacility, selectedDate],
@@ -71,6 +78,11 @@ export default function OffersScreen() {
     staleTime: 60_000,
   });
 
+  const parsedNewPrice = parseFloat(newPrice);
+  const discountPercent = originalPrice > 0 && parsedNewPrice > 0
+    ? Math.max(1, Math.min(99, Math.round((1 - parsedNewPrice / originalPrice) * 100)))
+    : 0;
+
   const createMutation = useMutation({
     mutationFn: () => offersApi.create({
       facilityId: selectedFacility,
@@ -83,7 +95,8 @@ export default function OffersScreen() {
       qc.invalidateQueries({ queryKey: ['owner-offers'] });
       setShowCreateModal(false);
       setStartTime('');
-      Alert.alert('تم إنشاء العرض! ⚡', 'سيظهر العرض للاعبين فوراً في التطبيق');
+      setNewPrice('');
+      Alert.alert('تم إنشاء العرض! ⚡', `سيظهر السعر الجديد ${parsedNewPrice} ل.س للاعبين فوراً`);
     },
     onError: (err: any) => Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر إنشاء العرض'),
   });
@@ -93,28 +106,27 @@ export default function OffersScreen() {
     onSuccess: () => {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       qc.invalidateQueries({ queryKey: ['owner-offers'] });
+      Alert.alert('تم', 'تم إلغاء العرض بنجاح');
     },
-    onError: () => Alert.alert('خطأ', 'تعذّر إلغاء العرض'),
+    onError: (err: any) => Alert.alert('خطأ', err?.response?.data?.message ?? 'تعذّر إلغاء العرض'),
   });
 
-  const slots: any[]         = slotsRes?.data?.data ?? [];
-  const availableSlots       = slots.filter((s) => s.status === 'available');
-  const offers: any[]        = offersRes?.data?.data ?? [];
-  const activeOffers         = offers.filter((o) => o.isActive);
+  const slots: any[]   = slotsRes?.data?.data ?? [];
+  const availableSlots = slots.filter((s) => s.status === 'available');
+  const activeOffers: any[] = offersRes?.data?.data ?? [];
+
+  const canCreate = !!startTime && !!selectedFacility && parsedNewPrice > 0 && parsedNewPrice < originalPrice;
 
   const confirmDeactivate = (id: string) => {
-    Alert.alert('إلغاء العرض', 'هل تريد إلغاء هذا العرض؟ لن يتمكن اللاعبون من رؤيته.', [
+    Alert.alert('إلغاء العرض', 'هل تريد إلغاء هذا العرض؟', [
       { text: 'لا', style: 'cancel' },
       { text: 'نعم، إلغاء', style: 'destructive', onPress: () => deactivateMutation.mutate(id) },
     ]);
   };
 
-  const canCreate = !!startTime && !!selectedFacility;
-
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safe}>
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
             <Text style={[Typography.bodyLg, { color: Colors.text.secondary }]}>← رجوع</Text>
@@ -125,18 +137,16 @@ export default function OffersScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Info banner */}
         <View style={styles.infoBanner}>
           <Text style={{ fontSize: 24 }}>⚡</Text>
           <View style={{ flex: 1 }}>
             <Text style={[Typography.labelMd, { color: Colors.warning }]}>ما هي العروض الفلاش؟</Text>
             <Text style={[Typography.bodySm, { color: Colors.text.secondary, marginTop: 2 }]}>
-              قدّم خصماً على وقت محدد لجذب المزيد من الحجوزات. ينتهي العرض تلقائياً عند بداية الوقت.
+              قدّم سعراً مخفّضاً على وقت محدد لجذب المزيد من الحجوزات. ينتهي العرض تلقائياً عند بداية الوقت.
             </Text>
           </View>
         </View>
 
-        {/* Active offers */}
         <Text style={[Typography.h3, styles.sectionTitle]}>
           العروض النشطة {activeOffers.length > 0 ? `(${activeOffers.length})` : ''}
         </Text>
@@ -173,122 +183,140 @@ export default function OffersScreen() {
 
       {/* Create Modal */}
       <Modal visible={showCreateModal} transparent animationType="slide" onRequestClose={() => setShowCreateModal(false)}>
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowCreateModal(false)} />
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
-            <Text style={[Typography.h3, { color: Colors.text.primary, marginBottom: Spacing.xl, textAlign: 'center' }]}>
-              ⚡ عرض فلاش جديد
-            </Text>
-            <Text style={[Typography.bodySm, { color: Colors.text.tertiary, textAlign: 'center', marginTop: -Spacing.md, marginBottom: Spacing.xl }]}>
-              اختر الوقت والخصم، وسيظهر العرض للاعبين فوراً
-            </Text>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+          <View style={styles.modalOverlay}>
+            <TouchableOpacity style={StyleSheet.absoluteFill} onPress={() => setShowCreateModal(false)} />
+            <View style={styles.modalSheet}>
+              <View style={styles.modalHandle} />
+              <Text style={[Typography.h3, { color: Colors.text.primary, marginBottom: Spacing.sm, textAlign: 'center' }]}>
+                ⚡ عرض فلاش جديد
+              </Text>
+              <Text style={[Typography.bodySm, { color: Colors.text.tertiary, textAlign: 'center', marginBottom: Spacing.xl }]}>
+                اختر الوقت وأدخل السعر الجديد بعد العرض
+              </Text>
 
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Facility selector */}
-              {facilities.length > 1 && (
-                <View style={{ marginBottom: Spacing.lg }}>
-                  <Text style={styles.modalLabel}>الملعب</Text>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                    <View style={{ flexDirection: 'row', gap: 8 }}>
-                      {facilities.map((f) => (
-                        <TouchableOpacity
-                          key={f._id}
-                          onPress={() => setSelectedFacility(f._id)}
-                          style={[styles.chip, selectedFacility === f._id && styles.chipActive]}
-                        >
-                          <Text style={[Typography.labelSm, { color: selectedFacility === f._id ? Colors.warning : Colors.text.secondary }]}>
-                            🏟️ {f.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  </ScrollView>
-                </View>
-              )}
+              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+                {/* Facility selector */}
+                {facilities.length > 1 && (
+                  <View style={{ marginBottom: Spacing.lg }}>
+                    <Text style={styles.modalLabel}>الملعب</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                        {facilities.map((f) => (
+                          <TouchableOpacity
+                            key={f._id}
+                            onPress={() => { setSelectedFacility(f._id); setStartTime(''); setNewPrice(''); }}
+                            style={[styles.chip, selectedFacility === f._id && styles.chipActive]}
+                          >
+                            <Text style={[Typography.labelSm, { color: selectedFacility === f._id ? Colors.warning : Colors.text.secondary }]}>
+                              🏟️ {f.name}
+                            </Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    </ScrollView>
+                  </View>
+                )}
 
-              {/* Date */}
-              <Text style={styles.modalLabel}>التاريخ</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.lg }}>
-                <View style={{ flexDirection: 'row', gap: 8 }}>
-                  {DATE_LIST.slice(0, 10).map((d) => (
-                    <TouchableOpacity
-                      key={d.date}
-                      onPress={() => { setSelectedDate(d.date); setStartTime(''); }}
-                      style={[styles.dateChip, selectedDate === d.date && styles.chipActive]}
-                    >
-                      <Text style={[Typography.labelSm, { color: selectedDate === d.date ? Colors.warning : Colors.text.primary }]}>
-                        {d.dayLabel}
-                      </Text>
-                      <Text style={[Typography.bodySm, { color: selectedDate === d.date ? Colors.warning : Colors.text.tertiary }]}>
-                        {d.label}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </ScrollView>
-
-              {/* Time slot */}
-              <Text style={styles.modalLabel}>الوقت المتاح</Text>
-              {slotsLoading ? (
-                <ActivityIndicator color={Colors.brand.primary} style={{ marginVertical: Spacing.md }} />
-              ) : availableSlots.length === 0 ? (
-                <View style={styles.noSlots}>
-                  <Text style={[Typography.bodyMd, { color: Colors.text.tertiary, textAlign: 'center' }]}>
-                    لا توجد أوقات متاحة في هذا التاريخ
-                  </Text>
-                </View>
-              ) : (
+                {/* Date */}
+                <Text style={styles.modalLabel}>التاريخ</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.lg }}>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {availableSlots.map((s) => (
+                    {DATE_LIST.slice(0, 10).map((d) => (
                       <TouchableOpacity
-                        key={s.startTime}
-                        onPress={() => setStartTime(s.startTime)}
-                        style={[styles.chip, startTime === s.startTime && styles.chipActive]}
+                        key={d.date}
+                        onPress={() => { setSelectedDate(d.date); setStartTime(''); }}
+                        style={[styles.dateChip, selectedDate === d.date && styles.chipActive]}
                       >
-                        <Text style={[Typography.labelMd, { color: startTime === s.startTime ? Colors.warning : Colors.text.secondary }]}>
-                          🕐 {formatTime12h(s.startTime)}
+                        <Text style={[Typography.labelSm, { color: selectedDate === d.date ? Colors.warning : Colors.text.primary }]}>
+                          {d.dayLabel}
+                        </Text>
+                        <Text style={[Typography.bodySm, { color: selectedDate === d.date ? Colors.warning : Colors.text.tertiary }]}>
+                          {d.label}
                         </Text>
                       </TouchableOpacity>
                     ))}
                   </View>
                 </ScrollView>
-              )}
 
-              {/* Discount */}
-              <Text style={styles.modalLabel}>نسبة الخصم</Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: Spacing.xl }}>
-                {DISCOUNT_OPTIONS.map((d) => (
-                  <TouchableOpacity
-                    key={d}
-                    onPress={() => setDiscountPercent(d)}
-                    style={[styles.discountChip, discountPercent === d && styles.discountChipActive]}
-                  >
-                    <Text style={[Typography.labelLg, { color: discountPercent === d ? Colors.warning : Colors.text.tertiary }]}>
-                      {d}%
+                {/* Time slot */}
+                <Text style={styles.modalLabel}>الوقت المتاح</Text>
+                {slotsLoading ? (
+                  <ActivityIndicator color={Colors.brand.primary} style={{ marginVertical: Spacing.md }} />
+                ) : availableSlots.length === 0 ? (
+                  <View style={styles.noSlots}>
+                    <Text style={[Typography.bodyMd, { color: Colors.text.tertiary, textAlign: 'center' }]}>
+                      لا توجد أوقات متاحة في هذا التاريخ
                     </Text>
-                    <Text style={[Typography.bodySm, { color: discountPercent === d ? Colors.warning : Colors.text.tertiary }]}>
-                      خصم
+                  </View>
+                ) : (
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.lg }}>
+                    <View style={{ flexDirection: 'row', gap: 8 }}>
+                      {availableSlots.map((s) => (
+                        <TouchableOpacity
+                          key={s.startTime}
+                          onPress={() => setStartTime(s.startTime)}
+                          style={[styles.chip, startTime === s.startTime && styles.chipActive]}
+                        >
+                          <Text style={[Typography.labelMd, { color: startTime === s.startTime ? Colors.warning : Colors.text.secondary }]}>
+                            🕐 {formatTime12h(s.startTime)}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+                )}
+
+                {/* New Price Input */}
+                <Text style={styles.modalLabel}>السعر الجديد بعد العرض</Text>
+                {originalPrice > 0 && (
+                  <Text style={[Typography.bodySm, { color: Colors.text.tertiary, marginBottom: Spacing.sm, textAlign: 'right' }]}>
+                    السعر الأصلي: {originalPrice} ل.س
+                  </Text>
+                )}
+                <View style={styles.priceInputWrap}>
+                  <TextInput
+                    style={styles.priceInput}
+                    value={newPrice}
+                    onChangeText={setNewPrice}
+                    placeholder={`أقل من ${originalPrice} ل.س`}
+                    placeholderTextColor={Colors.text.tertiary}
+                    keyboardType="numeric"
+                    textAlign="right"
+                  />
+                  <Text style={styles.priceUnit}>ل.س</Text>
+                </View>
+                {parsedNewPrice > 0 && originalPrice > 0 && parsedNewPrice < originalPrice && (
+                  <View style={styles.discountPreview}>
+                    <Text style={{ fontSize: 16 }}>⚡</Text>
+                    <Text style={[Typography.labelMd, { color: Colors.warning }]}>
+                      خصم {discountPercent}% — توفير {originalPrice - parsedNewPrice} ل.س
                     </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
+                  </View>
+                )}
+                {parsedNewPrice >= originalPrice && parsedNewPrice > 0 && (
+                  <Text style={[Typography.bodySm, { color: Colors.error, textAlign: 'center', marginTop: 4 }]}>
+                    يجب أن يكون السعر أقل من {originalPrice} ل.س
+                  </Text>
+                )}
 
-              <PrimaryButton
-                label={canCreate ? `إنشاء عرض ${discountPercent}% خصم` : 'اختر وقتاً أولاً'}
-                onPress={() => createMutation.mutate()}
-                loading={createMutation.isPending}
-                disabled={!canCreate}
-              />
-              <TouchableOpacity onPress={() => setShowCreateModal(false)} style={{ alignItems: 'center', marginTop: Spacing.lg, paddingVertical: Spacing.sm }}>
-                <Text style={[Typography.labelMd, { color: Colors.text.tertiary }]}>إلغاء</Text>
-              </TouchableOpacity>
+                <View style={{ marginTop: Spacing.xl }}>
+                  <PrimaryButton
+                    label={canCreate ? `إنشاء العرض بسعر ${parsedNewPrice} ل.س` : 'اختر الوقت والسعر أولاً'}
+                    onPress={() => createMutation.mutate()}
+                    loading={createMutation.isPending}
+                    disabled={!canCreate}
+                  />
+                </View>
+                <TouchableOpacity onPress={() => setShowCreateModal(false)} style={{ alignItems: 'center', marginTop: Spacing.lg, paddingVertical: Spacing.sm }}>
+                  <Text style={[Typography.labelMd, { color: Colors.text.tertiary }]}>إلغاء</Text>
+                </TouchableOpacity>
 
-              <View style={{ height: 40 }} />
-            </ScrollView>
+                <View style={{ height: 40 }} />
+              </ScrollView>
+            </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -299,9 +327,12 @@ function OfferCard({ offer, onDeactivate }: { offer: any; onDeactivate: () => vo
     <GlassCard style={styles.offerCard}>
       <View style={styles.offerLeft}>
         <View style={styles.discountBadge}>
-          <Text style={[Typography.numericMd, { color: Colors.warning }]}>{offer.discountPercent}%</Text>
-          <Text style={[Typography.bodySm, { color: Colors.warning }]}>خصم</Text>
+          <Text style={[Typography.numericMd, { color: Colors.warning }]}>{offer.discountedPrice ?? '—'}</Text>
+          <Text style={[Typography.bodySm, { color: Colors.warning }]}>ل.س</Text>
         </View>
+        {offer.discountPercent && (
+          <Text style={[Typography.labelSm, { color: Colors.warning, marginTop: 4 }]}>{offer.discountPercent}% خصم</Text>
+        )}
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[Typography.labelLg, { color: Colors.text.primary }]} numberOfLines={1}>
@@ -345,10 +376,7 @@ const styles = StyleSheet.create({
     color: Colors.text.primary,
     paddingHorizontal: Spacing.xl, paddingTop: Spacing.xl, paddingBottom: Spacing.md,
   },
-  emptyState: {
-    flex: 1, alignItems: 'center', justifyContent: 'center',
-    paddingHorizontal: Spacing.xl,
-  },
+  emptyState: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.xl },
   createFirstBtn: {
     marginTop: Spacing.xl,
     backgroundColor: Colors.warning,
@@ -362,7 +390,7 @@ const styles = StyleSheet.create({
   },
   offerLeft: { alignItems: 'center' },
   discountBadge: {
-    width: 60, height: 60, borderRadius: 30,
+    width: 64, height: 64, borderRadius: 32,
     backgroundColor: Colors.warningBg,
     borderWidth: 1.5, borderColor: Colors.warning + '44',
     alignItems: 'center', justifyContent: 'center',
@@ -378,7 +406,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28, borderTopRightRadius: 28,
     padding: Spacing.xl, paddingBottom: 0,
     borderTopWidth: 1, borderTopColor: Colors.glass.border,
-    maxHeight: '90%',
+    maxHeight: '92%',
   },
   modalHandle: {
     width: 40, height: 4, borderRadius: 2,
@@ -403,18 +431,32 @@ const styles = StyleSheet.create({
     alignItems: 'center', minWidth: 64,
   },
   chipActive: { borderColor: Colors.warning, backgroundColor: Colors.warningBg },
-  discountChip: {
-    paddingHorizontal: Spacing.lg, paddingVertical: 10,
-    borderRadius: Radius.md, borderWidth: 1.5,
-    borderColor: Colors.glass.border, backgroundColor: Colors.background.secondary,
-    minWidth: 70, alignItems: 'center',
-  },
-  discountChipActive: { borderColor: Colors.warning, backgroundColor: Colors.warningBg },
   noSlots: {
     height: 60, borderRadius: Radius.lg,
     backgroundColor: Colors.background.secondary,
     borderWidth: 1, borderColor: Colors.glass.border,
     alignItems: 'center', justifyContent: 'center',
     marginBottom: Spacing.lg,
+  },
+  priceInputWrap: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: Colors.background.secondary,
+    borderRadius: Radius.lg, borderWidth: 1.5,
+    borderColor: Colors.glass.border,
+    paddingHorizontal: Spacing.lg,
+    marginBottom: Spacing.sm,
+  },
+  priceInput: {
+    flex: 1, fontSize: 22, fontWeight: '700',
+    color: Colors.text.primary,
+    paddingVertical: 14,
+  },
+  priceUnit: { fontSize: 14, fontWeight: '600', color: Colors.text.tertiary },
+  discountPreview: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: Colors.warningBg, borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md, paddingVertical: 10,
+    borderWidth: 1, borderColor: Colors.warning + '44',
+    marginBottom: Spacing.sm,
   },
 });

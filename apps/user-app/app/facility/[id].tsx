@@ -68,9 +68,10 @@ function buildDateList(days = 14) {
 const DATE_LIST = buildDateList();
 
 export default function FacilityDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, offerDate, offerStartTime } = useLocalSearchParams<{ id: string; offerDate?: string; offerStartTime?: string }>();
   const insets = useSafeAreaInsets();
-  const [selectedDate, setSelectedDate] = useState(DATE_LIST[0].date);
+  const initDate = offerDate && DATE_LIST.some((d) => d.date === offerDate) ? offerDate : DATE_LIST[0].date;
+  const [selectedDate, setSelectedDate] = useState(initDate);
   const [selectedSlot, setSelectedSlot] = useState<SlotDtoType | null>(null);
   const [imageIndex, setImageIndex] = useState(0);
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -91,6 +92,15 @@ export default function FacilityDetailScreen() {
     queryFn: () => facilitiesApi.getSlots(id, selectedDate),
     staleTime: 30_000,
   });
+
+  // Auto-select the offer slot when navigating from an offer card
+  const slots: SlotDtoType[] = slotsRes?.data?.data ?? [];
+  React.useEffect(() => {
+    if (offerStartTime && slots.length > 0 && selectedDate === initDate) {
+      const offerSlot = slots.find((s) => s.startTime === offerStartTime && s.status === 'available');
+      if (offerSlot) setSelectedSlot(offerSlot);
+    }
+  }, [slots.length, offerStartTime]);
 
   const { data: myRatingRes } = useQuery({
     queryKey: ['my-rating', id],
@@ -119,7 +129,6 @@ export default function FacilityDetailScreen() {
   };
 
   const facility = facilityRes?.data?.data;
-  const slots: SlotDtoType[] = slotsRes?.data?.data ?? [];
 
   const primarySport = (facility?.sports ?? [])[0];
   const imageSport = primarySport ?? 'football';
@@ -413,6 +422,7 @@ export default function FacilityDetailScreen() {
                   key={i}
                   slot={slot}
                   selected={selectedSlot?.startTime === slot.startTime}
+                  hasOffer={!!offerStartTime && slot.startTime === offerStartTime && slot.status === 'available'}
                   onPress={() => setSelectedSlot((prev) => prev?.startTime === slot.startTime ? null : slot)}
                   style={styles.slotItem}
                 />

@@ -78,4 +78,17 @@ export class AuthController {
   logout(@CurrentUser() user: JwtPayloadType) {
     return this.authService.logout(user.sub);
   }
+
+  @Post('change-password')
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Change password (requires old password)' })
+  changePassword(
+    @CurrentUser() user: JwtPayloadType,
+    @Body('oldPassword') oldPassword: string,
+    @Body('newPassword') newPassword: string,
+  ) {
+    return this.authService.changePassword(user.sub, oldPassword, newPassword);
+  }
 }

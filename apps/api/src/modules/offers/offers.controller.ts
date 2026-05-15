@@ -7,7 +7,6 @@ import {
   Param,
   Query,
   UseGuards,
-  UsePipes,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { OffersService, CreateOfferDto, CreateOfferDtoType } from './offers.service';
@@ -43,8 +42,7 @@ export class OffersController {
   @Roles('owner')
   @ApiBearerAuth()
   @ApiOperation({ summary: '[Owner] Create a flash discount on a free slot' })
-  @UsePipes(new ZodValidationPipe(CreateOfferDto))
-  create(@CurrentUser() user: JwtPayloadType, @Body() dto: CreateOfferDtoType) {
+  create(@CurrentUser() user: JwtPayloadType, @Body(new ZodValidationPipe(CreateOfferDto)) dto: CreateOfferDtoType) {
     return this.offersService.createOffer(user.sub, dto);
   }
 

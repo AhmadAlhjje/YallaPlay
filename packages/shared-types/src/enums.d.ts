@@ -12,7 +12,7 @@ export declare const PaymentMethod: readonly ["qr_cash", "stc_pay", "mada", "poi
 export type PaymentMethod = (typeof PaymentMethod)[number];
 export declare const PaymentStatus: readonly ["unpaid", "paid"];
 export type PaymentStatus = (typeof PaymentStatus)[number];
-export declare const NotificationType: readonly ["booking_confirmed", "booking_reminder", "booking_cancelled", "waitlist_available", "points_earned", "offer", "plan_upgraded", "plan_expired"];
+export declare const NotificationType: readonly ["booking_confirmed", "booking_reminder", "booking_cancelled", "payment_submitted", "new_booking", "waitlist_available", "points_earned", "offer", "plan_upgraded", "plan_expired"];
 export type NotificationType = (typeof NotificationType)[number];
 export declare const WaitlistStatus: readonly ["waiting", "notified", "converted", "expired"];
 export type WaitlistStatus = (typeof WaitlistStatus)[number];

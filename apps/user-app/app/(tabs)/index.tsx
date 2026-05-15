@@ -331,7 +331,10 @@ export default function HomeScreen() {
                   const facility = item.facilityId;
                   return (
                     <TouchableOpacity
-                      onPress={() => handleFacilityPress(facility?._id ?? item.facilityId)}
+                      onPress={() => router.push({
+                        pathname: `/facility/${facility?._id ?? item.facilityId}`,
+                        params: { offerDate: item.date, offerStartTime: item.startTime },
+                      })}
                       style={styles.offerCard}
                       activeOpacity={0.85}
                     >

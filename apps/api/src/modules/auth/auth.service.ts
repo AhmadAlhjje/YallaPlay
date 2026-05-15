@@ -219,6 +219,20 @@ export class AuthService {
     await this.userModel.updateOne({ _id: userId }, { $unset: { refreshTokenHash: 1 } });
   }
 
+  async changePassword(userId: string, oldPassword: string, newPassword: string): Promise<void> {
+    const user = await this.userModel.findById(userId).select('+passwordHash').lean();
+    if (!user) throw new BadRequestException('المستخدم غير موجود.');
+    if (!user.passwordHash) throw new BadRequestException('لا يمكن تغيير كلمة المرور لهذا الحساب.');
+
+    const isMatch = await bcrypt.compare(oldPassword, user.passwordHash);
+    if (!isMatch) throw new UnauthorizedException('كلمة المرور الحالية غير صحيحة.');
+
+    if (newPassword.length < 6) throw new BadRequestException('كلمة المرور الجديدة يجب أن تكون 6 أحرف على الأقل.');
+
+    const newHash = await bcrypt.hash(newPassword, this.BCRYPT_ROUNDS);
+    await this.userModel.updateOne({ _id: userId }, { $set: { passwordHash: newHash } });
+  }
+
   private async issueTokens(
     user: any,
   ): Promise<{ accessToken: string; refreshToken: string }> {

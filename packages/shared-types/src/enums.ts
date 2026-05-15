@@ -40,6 +40,7 @@ export const NotificationType = [
   'booking_reminder',
   'booking_cancelled',
   'payment_submitted',
+  'new_booking',
   'waitlist_available',
   'points_earned',
   'offer',

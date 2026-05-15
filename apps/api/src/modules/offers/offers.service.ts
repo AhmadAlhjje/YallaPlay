@@ -87,7 +87,10 @@ export class OffersService {
   }
 
   async getOwnerOffers(ownerId: string, facilityId?: string): Promise<OfferDocument[]> {
-    const filter: Record<string, unknown> = { ownerId: new Types.ObjectId(ownerId) };
+    const filter: Record<string, unknown> = {
+      ownerId: new Types.ObjectId(ownerId),
+      isActive: true,
+    };
     if (facilityId) filter['facilityId'] = new Types.ObjectId(facilityId);
     return this.offerModel
       .find(filter)

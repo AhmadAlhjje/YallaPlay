@@ -107,6 +107,19 @@ export class BookingsService {
     const qrToken = await this.signQrToken(booking);
     await this.bookingModel.updateOne({ _id: booking._id }, { qrToken });
 
+    // 9. Notify owner about the new booking request (fire-and-forget)
+    this.userModel.findById(userId).select('name').lean().then((athlete) => {
+      const athleteName = (athlete as any)?.name ?? 'لاعب';
+      this.notificationQueue.add('new_booking', {
+        ownerId: facility.ownerId.toString(),
+        bookingId: booking._id.toString(),
+        facilityName: facility.name,
+        date: dto.date,
+        startTime: dto.startTime,
+        userName: athleteName,
+      }).catch((err) => this.logger.warn(`notification queue error: ${err?.message}`));
+    }).catch((err) => this.logger.warn(`user fetch error: ${err?.message}`));
+
     this.logger.log(`Booking created: ${booking._id} | User: ${userId} | Facility: ${dto.facilityId}`);
 
     return this.bookingModel.findById(booking._id).populate('facilityId', 'name address phone images shamCashQr').lean() as unknown as BookingDocument;
@@ -224,8 +237,8 @@ export class BookingsService {
     if (!booking) throw new NotFoundException('الحجز غير موجود.');
 
     const facility = booking.facilityId as unknown as FacilityDocument;
-    const isOwner = requesterRole === 'owner' && facility.ownerId.toString() === requesterId;
-    const isUser = booking.userId.toString() === requesterId;
+    const isOwner = requesterRole === 'owner' && facility?.ownerId?.toString() === requesterId;
+    const isUser = booking.userId?.toString() === requesterId;
 
     if (!isOwner && !isUser) {
       throw new ForbiddenException('ليس لديك صلاحية لإلغاء هذا الحجز.');
@@ -288,22 +301,27 @@ export class BookingsService {
   // ─── Get single booking (owner or user) ───────────────────────────────────
 
   async findOne(bookingId: string, requesterId: string, requesterRole: string): Promise<BookingDocument> {
-    const booking = await this.bookingModel
+    const raw = await this.bookingModel
       .findById(bookingId)
       .select('+qrToken')
-      .populate('facilityId', 'name address phone location images shamCashQr')
+      .populate('facilityId', 'name address phone location images shamCashQr ownerId')
+      .populate('userId', 'name phone avatar')
       .lean();
 
-    if (!booking) throw new NotFoundException('الحجز غير موجود.');
+    if (!raw) throw new NotFoundException('الحجز غير موجود.');
 
-    const facility = booking.facilityId as unknown as FacilityDocument;
-    const isOwner = requesterRole === 'owner' && facility.ownerId.toString() === requesterId;
-    const isUser = booking.userId.toString() === requesterId;
+    const facility = raw.facilityId as unknown as FacilityDocument;
+    const isOwner = requesterRole === 'owner' && facility?.ownerId?.toString() === requesterId;
+    const isUser = raw.userId?.toString() === requesterId || (raw as any).userId?._id?.toString() === requesterId;
     const isAdmin = requesterRole === 'admin';
 
     if (!isOwner && !isUser && !isAdmin) {
       throw new ForbiddenException('ليس لديك صلاحية لعرض هذا الحجز.');
     }
+
+    // Rename populated userId → user for frontend compatibility
+    const { userId, ...rest } = raw as any;
+    const booking = { ...rest, user: userId };
 
     return booking as unknown as BookingDocument;
   }
@@ -411,7 +429,7 @@ export class BookingsService {
 
   async markSharedViaWhatsapp(bookingId: string, userId: string): Promise<void> {
     const booking = await this.bookingModel.findById(bookingId).lean();
-    if (!booking || booking.userId.toString() !== userId) {
+    if (!booking || booking.userId?.toString() !== userId) {
       throw new ForbiddenException();
     }
     await this.bookingModel.updateOne({ _id: bookingId }, { sharedViaWhatsapp: true });
