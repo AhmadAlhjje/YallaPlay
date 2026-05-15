@@ -21,6 +21,7 @@ export const PlanTier = ['free', 'primer', 'pro', 'custom'] as const;
 export type PlanTier = (typeof PlanTier)[number];
 
 export const BookingStatus = [
+  'awaiting_payment',
   'pending_payment',
   'confirmed',
   'cancelled',

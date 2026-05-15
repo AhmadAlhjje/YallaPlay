@@ -197,7 +197,7 @@ export class FacilitiesService {
         .find({
           facilityId: new Types.ObjectId(facilityId),
           date,
-          status: { $in: ['confirmed', 'pending_payment'] },
+          status: { $in: ['confirmed', 'pending_payment', 'awaiting_payment'] },
         })
         .select('startTime status')
         .lean(),
@@ -222,7 +222,7 @@ export class FacilitiesService {
       if (bookingStatus === 'confirmed') {
         return { ...slot, status: 'booked' as const, price: facility.pricePerSlot };
       }
-      if (bookingStatus === 'pending_payment') {
+      if (bookingStatus === 'pending_payment' || bookingStatus === 'awaiting_payment') {
         return { ...slot, status: 'pending' as const, price: facility.pricePerSlot };
       }
 

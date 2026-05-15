@@ -15,11 +15,12 @@ import { Colors, Typography, Spacing, Radius } from '../../src/theme';
 import { formatTimeRange } from '../../src/lib/time';
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; icon: string }> = {
-  pending:   { label: 'معلّق',    color: Colors.warning,       bg: Colors.warningBg,  icon: '⏳' },
-  confirmed: { label: 'مؤكّد',    color: Colors.success,       bg: Colors.successBg,  icon: '✅' },
-  completed: { label: 'مكتمل',    color: Colors.info,          bg: Colors.infoBg,     icon: '🏁' },
-  cancelled: { label: 'ملغي',     color: Colors.error,         bg: Colors.errorBg,    icon: '❌' },
-  no_show:   { label: 'لم يحضر', color: Colors.text.tertiary, bg: Colors.background.secondary, icon: '👻' },
+  awaiting_payment: { label: 'بانتظار الدفع',    color: Colors.text.tertiary, bg: Colors.background.secondary, icon: '⌛' },
+  pending_payment:  { label: 'بانتظار التأكيد',  color: Colors.warning,       bg: Colors.warningBg,  icon: '⏳' },
+  confirmed:        { label: 'مؤكّد',             color: Colors.success,       bg: Colors.successBg,  icon: '✅' },
+  completed:        { label: 'مكتمل',             color: Colors.info,          bg: Colors.infoBg,     icon: '🏁' },
+  cancelled:        { label: 'ملغي',              color: Colors.error,         bg: Colors.errorBg,    icon: '❌' },
+  no_show:          { label: 'لم يحضر',           color: Colors.text.tertiary, bg: Colors.background.secondary, icon: '👻' },
 };
 
 const CANCEL_REASONS = [
@@ -79,7 +80,7 @@ export default function BookingDetailScreen() {
     const start = new Date(`${booking.date}T${booking.startTime}:00`);
     return (start.getTime() - Date.now()) / (1000 * 60 * 60);
   })();
-  const canCancel = ['pending', 'pending_payment'].includes(booking.status) ||
+  const canCancel = ['awaiting_payment', 'pending_payment'].includes(booking.status) ||
     (booking.status === 'confirmed' && hoursUntilBooking >= 2);
   const tooLateToCancel = booking.status === 'confirmed' && hoursUntilBooking < 2 && hoursUntilBooking > 0;
 
@@ -110,7 +111,7 @@ export default function BookingDetailScreen() {
           </View>
 
           {/* QR Code (only for pending/confirmed) */}
-          {(booking.status === 'pending' || booking.status === 'confirmed') && booking.qrToken && (
+          {(['pending_payment', 'confirmed'].includes(booking.status)) && booking.qrToken && (
             <GlassCard style={styles.qrCard}>
               <Text style={[Typography.labelMd, { color: Colors.text.secondary, marginBottom: Spacing.lg }]}>
                 أرِ هذا الرمز للمسؤول

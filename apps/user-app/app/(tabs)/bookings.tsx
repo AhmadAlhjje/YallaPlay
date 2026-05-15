@@ -13,19 +13,21 @@ import { formatTimeRange } from '../../src/lib/time';
 type Filter = 'upcoming' | 'past';
 
 const STATUS_COLORS: Record<string, string> = {
-  pending_payment: Colors.warning,
-  confirmed:       Colors.success,
-  completed:       Colors.info,
-  cancelled:       Colors.error,
-  no_show:         Colors.text.tertiary,
+  awaiting_payment: Colors.text.tertiary,
+  pending_payment:  Colors.warning,
+  confirmed:        Colors.success,
+  completed:        Colors.info,
+  cancelled:        Colors.error,
+  no_show:          Colors.text.tertiary,
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  pending_payment: 'معلّق',
-  confirmed:       'مؤكّد',
-  completed:       'مكتمل',
-  cancelled:       'ملغي',
-  no_show:         'لم يحضر',
+  awaiting_payment: 'بانتظار الدفع',
+  pending_payment:  'بانتظار التأكيد',
+  confirmed:        'مؤكّد',
+  completed:        'مكتمل',
+  cancelled:        'ملغي',
+  no_show:          'لم يحضر',
 };
 
 export default function BookingsTab() {

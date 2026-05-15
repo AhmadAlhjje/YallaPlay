@@ -14,6 +14,7 @@ import { Colors, Typography, Spacing, Radius } from '../../src/theme';
 import { formatTimeRange } from '../../src/lib/time';
 
 const STATUS_LABELS: Record<string, string> = {
+  awaiting_payment: 'بانتظار الدفع',
   pending_payment: 'بانتظار التأكيد',
   confirmed: 'مؤكّد',
   completed: 'مكتمل',
@@ -21,6 +22,7 @@ const STATUS_LABELS: Record<string, string> = {
   no_show: 'لم يحضر',
 };
 const STATUS_COLORS: Record<string, string> = {
+  awaiting_payment: Colors.text.tertiary,
   pending_payment: Colors.warning,
   confirmed: Colors.success,
   completed: Colors.info,
@@ -28,6 +30,7 @@ const STATUS_COLORS: Record<string, string> = {
   no_show: Colors.text.tertiary,
 };
 const STATUS_ICONS: Record<string, string> = {
+  awaiting_payment: 'hourglass-outline',
   pending_payment: 'time-outline',
   confirmed: 'checkmark-circle-outline',
   completed: 'flag-outline',

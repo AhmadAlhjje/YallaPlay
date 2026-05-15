@@ -25,7 +25,7 @@ export class Booking {
   @Prop({ required: true })
   endTime: string;
 
-  @Prop({ type: String, enum: BookingStatus, default: 'pending_payment', index: true })
+  @Prop({ type: String, enum: BookingStatus, default: 'awaiting_payment', index: true })
   status: string;
 
   @Prop({ type: String, enum: PaymentMethod, required: true })

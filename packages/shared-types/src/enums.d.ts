@@ -6,7 +6,7 @@ export declare const UserRole: readonly ["athlete", "owner", "admin"];
 export type UserRole = (typeof UserRole)[number];
 export declare const PlanTier: readonly ["free", "primer", "pro", "custom"];
 export type PlanTier = (typeof PlanTier)[number];
-export declare const BookingStatus: readonly ["pending_payment", "confirmed", "cancelled", "completed", "no_show"];
+export declare const BookingStatus: readonly ["awaiting_payment", "pending_payment", "confirmed", "cancelled", "completed", "no_show"];
 export type BookingStatus = (typeof BookingStatus)[number];
 export declare const PaymentMethod: readonly ["qr_cash", "stc_pay", "mada", "points"];
 export type PaymentMethod = (typeof PaymentMethod)[number];

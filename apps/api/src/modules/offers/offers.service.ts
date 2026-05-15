@@ -38,7 +38,7 @@ export class OffersService {
       facilityId: new Types.ObjectId(dto.facilityId),
       date: dto.date,
       startTime: dto.startTime,
-      status: { $in: ['confirmed', 'pending_payment'] },
+      status: { $in: ['confirmed', 'pending_payment', 'awaiting_payment'] },
     }).lean();
 
     if (conflict) {

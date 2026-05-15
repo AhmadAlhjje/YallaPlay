@@ -15,6 +15,7 @@ exports.SkillLevel = ['beginner', 'intermediate', 'pro'];
 exports.UserRole = ['athlete', 'owner', 'admin'];
 exports.PlanTier = ['free', 'primer', 'pro', 'custom'];
 exports.BookingStatus = [
+    'awaiting_payment',
     'pending_payment',
     'confirmed',
     'cancelled',

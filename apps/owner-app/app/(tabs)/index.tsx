@@ -32,12 +32,14 @@ function todayLabel() {
 }
 
 const STATUS_COLORS: Record<string, string> = {
+  awaiting_payment: Colors.text.tertiary,
   pending_payment: Colors.warning,
   confirmed: Colors.success,
   completed: Colors.info,
   cancelled: Colors.error,
 };
 const STATUS_LABELS: Record<string, string> = {
+  awaiting_payment: 'بانتظار الدفع',
   pending_payment: 'بانتظار التأكيد',
   confirmed: 'مؤكّد',
   completed: 'مكتمل',

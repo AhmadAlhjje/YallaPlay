@@ -66,7 +66,7 @@ export class BookingsService {
       userId: new Types.ObjectId(userId),
       date: dto.date,
       startTime: dto.startTime,
-      status: { $in: ['confirmed', 'pending_payment'] },
+      status: { $in: ['confirmed', 'pending_payment', 'awaiting_payment'] },
     }).lean();
 
     if (userConflict) {
@@ -87,7 +87,7 @@ export class BookingsService {
         date: dto.date,
         startTime: dto.startTime,
         endTime,
-        status: 'pending_payment',
+        status: 'awaiting_payment',
         paymentMethod: dto.paymentMethod,
         paymentStatus: 'unpaid',
         totalPrice: price.final,
@@ -179,14 +179,20 @@ export class BookingsService {
       throw new ForbiddenException('ليس لديك صلاحية لهذا الحجز.');
     }
 
-    if (booking.status !== 'pending_payment') {
+    if (!['awaiting_payment', 'pending_payment'].includes(booking.status)) {
       throw new BadRequestException('لا يمكن إرسال الدفع لهذا الحجز.');
     }
 
-    const updateData: Record<string, any> = { paymentSubmittedAt: new Date() };
+    const updateData: Record<string, any> = {
+      status: 'pending_payment',
+      paymentSubmittedAt: new Date(),
+    };
     if (screenshot) updateData['paymentScreenshot'] = screenshot;
 
-    await this.bookingModel.updateOne({ _id: bookingId }, { $set: updateData });
+    await this.bookingModel.updateOne(
+      { _id: bookingId },
+      { $set: updateData, $unset: { expiresAt: '' } },
+    );
 
     // Fire-and-forget: don't block the response on queue availability
     this.userModel.findById(userId).select('name phone').lean().then((user) => {
@@ -244,7 +250,7 @@ export class BookingsService {
       throw new ForbiddenException('ليس لديك صلاحية لإلغاء هذا الحجز.');
     }
 
-    if (!['confirmed', 'pending_payment'].includes(booking.status)) {
+    if (!['confirmed', 'pending_payment', 'awaiting_payment'].includes(booking.status)) {
       throw new BadRequestException('لا يمكن إلغاء هذا الحجز.');
     }
 

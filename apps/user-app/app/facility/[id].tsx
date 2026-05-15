@@ -93,14 +93,15 @@ export default function FacilityDetailScreen() {
     staleTime: 30_000,
   });
 
+  const slotsData: SlotDtoType[] = slotsRes?.data?.data ?? [];
+  const slots = slotsData;
+
   // Auto-select the offer slot when navigating from an offer card
-  const slots: SlotDtoType[] = slotsRes?.data?.data ?? [];
   React.useEffect(() => {
-    if (offerStartTime && slots.length > 0 && selectedDate === initDate) {
-      const offerSlot = slots.find((s) => s.startTime === offerStartTime && s.status === 'available');
-      if (offerSlot) setSelectedSlot(offerSlot);
-    }
-  }, [slots.length, offerStartTime]);
+    if (!offerStartTime || !slotsData.length) return;
+    const offerSlot = slotsData.find((s) => s.startTime === offerStartTime && s.status === 'available');
+    if (offerSlot) setSelectedSlot(offerSlot);
+  }, [slotsRes, offerStartTime]);
 
   const { data: myRatingRes } = useQuery({
     queryKey: ['my-rating', id],
@@ -422,7 +423,7 @@ export default function FacilityDetailScreen() {
                   key={i}
                   slot={slot}
                   selected={selectedSlot?.startTime === slot.startTime}
-                  hasOffer={!!offerStartTime && slot.startTime === offerStartTime && slot.status === 'available'}
+                  hasOffer={!!slot.discountedPrice}
                   onPress={() => setSelectedSlot((prev) => prev?.startTime === slot.startTime ? null : slot)}
                   style={styles.slotItem}
                 />
