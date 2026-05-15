@@ -172,7 +172,7 @@ export default function HomeScreen() {
   const activeOffers = offersData?.data?.data ?? [];
   const currentWeather = weatherData?.data?.data;
 
-  const handleFacilityPress = (id: string) => router.push(`/facility/${id}`);
+  const handleFacilityPress = (id: string) => router.push({ pathname: '/facility/[id]' as any, params: { id } });
   const handleSearch = () => {
     if (!search.trim()) return;
     router.push({ pathname: '/search', params: { query: search, sport: selectedSport } });
@@ -196,24 +196,23 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
         refreshControl={<RefreshControl refreshing={popularLoading} onRefresh={refetch} tintColor={Colors.brand.primary} />}
       >
-        {/* ── Hero gradient ─────────────────────────────────── */}
+        {/* ── Hero: grass green gradient (header + search only) ── */}
         <LinearGradient
-          colors={[Colors.brand.dark, Colors.brand.primary]}
-          start={{ x: 1, y: 0 }}
-          end={{ x: 0, y: 1 }}
+          colors={['#1A3D0A', '#2D6E14', '#3A8A1A']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.2, y: 1 }}
           style={styles.hero}
         >
           <SafeAreaView>
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.headerText}>
-                <Text style={[Typography.bodyMd, { color: 'rgba(255,255,255,0.8)' }]}>{greeting()}،</Text>
+                <Text style={[Typography.bodyMd, { color: 'rgba(255,255,255,0.75)' }]}>{greeting()}،</Text>
                 <Text style={[Typography.h2, { color: '#fff' }]}>
                   {user?.name?.split(' ')[0] ?? 'لاعب'}
                 </Text>
               </View>
               <View style={styles.headerActions}>
-                {/* Weather icon */}
                 {coords && (
                   <TouchableOpacity onPress={() => setWeatherOpen(true)} style={styles.headerIconBtn}>
                     <Text style={styles.weatherTemp}>
@@ -221,7 +220,6 @@ export default function HomeScreen() {
                     </Text>
                   </TouchableOpacity>
                 )}
-                {/* Notifications icon */}
                 <TouchableOpacity onPress={() => router.push('/notifications')} style={styles.headerIconBtn}>
                   <Ionicons name="notifications-outline" size={20} color="rgba(255,255,255,0.95)" />
                 </TouchableOpacity>
@@ -246,37 +244,36 @@ export default function HomeScreen() {
           </SafeAreaView>
         </LinearGradient>
 
-        {/* ── Content ───────────────────────────────────────── */}
-        <View style={styles.section}>
+        {/* ── Banner carousel — top half sits on green, bottom half on white ── */}
+        <FlatList
+          ref={bannerRef}
+          data={BANNERS}
+          horizontal
+          pagingEnabled
+          showsHorizontalScrollIndicator={false}
+          keyExtractor={(item) => item.id}
+          style={styles.heroBannerList}
+          contentContainerStyle={styles.heroBannerContent}
+          onScrollToIndexFailed={() => bannerRef.current?.scrollToIndex({ index: 0, animated: true })}
+          renderItem={({ item }) => (
+            <View style={styles.bannerCard}>
+              <Image source={{ uri: item.image }} style={styles.bannerImage} contentFit="cover" />
+              <LinearGradient
+                colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.6)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 0, y: 1 }}
+                style={styles.bannerOverlay}
+              />
+              <View style={styles.bannerTextWrap}>
+                <Text style={styles.bannerTitle}>{item.title}</Text>
+                <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
+              </View>
+            </View>
+          )}
+        />
 
-          {/* Banner carousel */}
-          <FadeSlideIn delay={0}>
-            <FlatList
-              ref={bannerRef}
-              data={BANNERS}
-              horizontal
-              pagingEnabled
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(item) => item.id}
-              contentContainerStyle={styles.bannerRow}
-              onScrollToIndexFailed={() => bannerRef.current?.scrollToIndex({ index: 0, animated: true })}
-              renderItem={({ item }) => (
-                <View style={styles.bannerCard}>
-                  <Image source={{ uri: item.image }} style={styles.bannerImage} contentFit="cover" />
-                  <LinearGradient
-                    colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.6)']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 0, y: 1 }}
-                    style={styles.bannerOverlay}
-                  />
-                  <View style={styles.bannerTextWrap}>
-                    <Text style={styles.bannerTitle}>{item.title}</Text>
-                    <Text style={styles.bannerSubtitle}>{item.subtitle}</Text>
-                  </View>
-                </View>
-              )}
-            />
-          </FadeSlideIn>
+        {/* ── Content (white card that overlaps banner bottom) ─── */}
+        <View style={styles.section}>
 
           {/* Sport filter chips */}
           <FadeSlideIn delay={80}>
@@ -332,8 +329,8 @@ export default function HomeScreen() {
                   return (
                     <TouchableOpacity
                       onPress={() => router.push({
-                        pathname: `/facility/${facility?._id ?? item.facilityId}`,
-                        params: { offerDate: item.date, offerStartTime: item.startTime },
+                        pathname: '/facility/[id]' as any,
+                        params: { id: facility?._id ?? item.facilityId, offerDate: item.date, offerStartTime: item.startTime },
                       })}
                       style={styles.offerCard}
                       activeOpacity={0.85}
@@ -594,10 +591,7 @@ const styles = StyleSheet.create({
   hero: {
     paddingHorizontal: Spacing.xl,
     paddingTop: Spacing.lg,
-    paddingBottom: Spacing.xl + 8,
-    borderBottomLeftRadius: Radius.xxl,
-    borderBottomRightRadius: Radius.xxl,
-    marginBottom: Spacing.lg,
+    paddingBottom: Spacing.xl,
   },
   header: {
     flexDirection: 'row-reverse',
@@ -638,18 +632,29 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
 
-  section: { paddingHorizontal: Spacing.xl },
+  heroBannerList: { marginTop: -16 },
+  heroBannerContent: { paddingHorizontal: Spacing.xl, gap: Spacing.md, paddingBottom: Spacing.md },
 
-  bannerRow: { paddingBottom: Spacing.lg, gap: Spacing.md },
   bannerCard: {
-    width: BANNER_W, height: 150, borderRadius: Radius.xl,
+    width: BANNER_W, height: 168, borderRadius: Radius.xl,
     overflow: 'hidden', backgroundColor: Colors.background.secondary,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18, shadowRadius: 12, elevation: 6,
   },
   bannerImage: { width: '100%', height: '100%' },
-  bannerOverlay: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '70%' },
-  bannerTextWrap: { position: 'absolute', right: 16, bottom: 12, left: 16 },
+  bannerOverlay: { position: 'absolute', left: 0, right: 0, bottom: 0, height: '65%' },
+  bannerTextWrap: { position: 'absolute', right: 16, bottom: 14, left: 16 },
   bannerTitle: { ...Typography.labelLg, color: '#fff', marginBottom: 4, textAlign: 'right' },
   bannerSubtitle: { ...Typography.bodySm, color: 'rgba(255,255,255,0.85)', textAlign: 'right' },
+
+  section: {
+    paddingHorizontal: Spacing.xl,
+    backgroundColor: Colors.background.primary,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: 0,
+    paddingTop: Spacing.xl,
+  },
 
   sectionTitle: { color: Colors.text.primary, marginBottom: Spacing.md },
   chipsListBreakout: { marginHorizontal: -Spacing.xl, marginBottom: Spacing.xl },
@@ -675,8 +680,8 @@ const styles = StyleSheet.create({
   listBreakout: { marginHorizontal: -Spacing.xl },
   listContent: { paddingHorizontal: Spacing.xl },
 
-  carouselCard: { width: 195 },
-  compactCard:  { width: 210 },
+  carouselCard: { width: 225 },
+  compactCard:  { width: 220 },
 
   distanceRow: { flexDirection: 'row-reverse', gap: Spacing.sm, marginBottom: Spacing.md },
   distanceChip: {

@@ -4,6 +4,7 @@ import {
   ViewStyle, StyleProp,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, Spacing, Radius } from '../theme';
 import { useFavoritesStore } from '../store/favorites.store';
@@ -47,18 +48,16 @@ export function FacilityCard({ facility, onPress, variant = 'full', style }: Fac
   const primarySport = (facility.sports ?? [])[0];
   const localImage   = SPORT_IMAGES[primarySport] ?? FALLBACK_IMAGE;
   const price        = facility.pricePerSlot ?? facility.pricePerHour ?? facility.minPrice ?? 0;
-  const rating   = facility.rating ?? 0;
-  const sports   = (facility.sports ?? []).slice(0, 3);
+  const rating       = facility.rating ?? 0;
+  const sports       = (facility.sports ?? []).slice(0, 3);
 
   const toggle = useFavoritesStore((s) => s.toggle);
-  // Boolean selector — Zustand re-renders when this value changes
   const isFav  = useFavoritesStore((s) => s.ids.has(facility._id));
 
-  // ── Compact variant ─────────────────────────────────────
+  // ── Compact variant ──────────────────────────────────────
   if (variant === 'compact') {
     return (
       <TouchableOpacity onPress={onPress} activeOpacity={0.88} style={[styles.compact, style]}>
-        {/* Image — right side */}
         <View style={styles.compactImgWrap}>
           <Image
             source={localImage}
@@ -66,6 +65,11 @@ export function FacilityCard({ facility, onPress, variant = 'full', style }: Fac
             contentFit="cover"
             placeholder={{ color: Colors.background.secondary }}
           />
+          {primarySport && (
+            <View style={styles.compactSportBadge}>
+              <Text style={{ fontSize: 11 }}>{SPORT_EMOJI[primarySport] ?? '🏟'}</Text>
+            </View>
+          )}
           {rating > 0 && (
             <View style={styles.compactRatingBadge}>
               <Ionicons name="star" size={9} color="#F59E0B" />
@@ -74,23 +78,20 @@ export function FacilityCard({ facility, onPress, variant = 'full', style }: Fac
           )}
         </View>
 
-        {/* Info — left side */}
         <View style={styles.compactInfo}>
           <Text style={styles.compactName} numberOfLines={2}>{facility.name}</Text>
-
           {facility.address && (
             <View style={styles.compactAddrRow}>
+              <Ionicons name="location-sharp" size={10} color={Colors.brand.primary} />
               <Text style={styles.compactAddr} numberOfLines={1}>{facility.address}</Text>
-              <View style={styles.pinBadgeSm}>
-                <Ionicons name="location-sharp" size={9} color={Colors.brand.primary} />
-              </View>
             </View>
           )}
-
           <View style={styles.compactFooter}>
-            {sports.slice(0, 2).map((s) => (
-              <Text key={s} style={{ fontSize: 14 }}>{SPORT_EMOJI[s] ?? '🏟'}</Text>
-            ))}
+            <View style={styles.compactSports}>
+              {sports.slice(0, 2).map((s) => (
+                <Text key={s} style={{ fontSize: 13 }}>{SPORT_EMOJI[s] ?? '🏟'}</Text>
+              ))}
+            </View>
             {price > 0 && (
               <View style={styles.pricePillSm}>
                 <Text style={styles.pricePillSmText}>{price} ر.س</Text>
@@ -99,11 +100,10 @@ export function FacilityCard({ facility, onPress, variant = 'full', style }: Fac
           </View>
         </View>
 
-        {/* Heart */}
         <TouchableOpacity onPress={() => toggle(facility._id)} style={styles.compactHeart} hitSlop={8}>
           <Ionicons
             name={isFav ? 'heart' : 'heart-outline'}
-            size={15}
+            size={14}
             color={isFav ? '#EF4444' : Colors.text.tertiary}
           />
         </TouchableOpacity>
@@ -111,10 +111,11 @@ export function FacilityCard({ facility, onPress, variant = 'full', style }: Fac
     );
   }
 
-  // ── Full variant — image + white info section ────────────
+  // ── Full variant — image + white info card ───────────────
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.88} style={[styles.card, style]}>
-      {/* Image section */}
+
+      {/* ── Image section ── */}
       <View style={styles.imgWrap}>
         <Image
           source={localImage}
@@ -123,7 +124,15 @@ export function FacilityCard({ facility, onPress, variant = 'full', style }: Fac
           placeholder={{ color: Colors.background.secondary }}
         />
 
-        {/* Rating — top left */}
+        {/* Subtle gradient at top for badge readability */}
+        <LinearGradient
+          colors={['rgba(0,0,0,0.28)', 'transparent']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0, y: 1 }}
+          style={styles.imgTopGradient}
+        />
+
+        {/* Rating badge — top left */}
         {rating > 0 && (
           <View style={styles.ratingBadge}>
             <Ionicons name="star" size={10} color="#F59E0B" />
@@ -132,48 +141,62 @@ export function FacilityCard({ facility, onPress, variant = 'full', style }: Fac
         )}
 
         {/* Heart — top right */}
-        <TouchableOpacity onPress={() => toggle(facility._id)} style={styles.heartBtn} hitSlop={8}>
+        <TouchableOpacity
+          onPress={() => toggle(facility._id)}
+          style={styles.heartBtn}
+          hitSlop={8}
+        >
           <Ionicons
             name={isFav ? 'heart' : 'heart-outline'}
-            size={18}
-            color={isFav ? '#EF4444' : 'rgba(255,255,255,0.95)'}
+            size={16}
+            color={isFav ? '#EF4444' : '#fff'}
           />
         </TouchableOpacity>
 
-        {/* Price — bottom right on image */}
-        {price > 0 && (
-          <View style={styles.priceBadge}>
-            <Text style={styles.priceBadgeText}>{price} ر.س/س</Text>
+        {/* Sport type label — bottom left of image */}
+        {primarySport && (
+          <View style={styles.sportImageBadge}>
+            <Text style={styles.sportImageEmoji}>{SPORT_EMOJI[primarySport] ?? '🏟'}</Text>
+            <Text style={styles.sportImageLabel}>{SPORT_LABEL[primarySport] ?? primarySport}</Text>
           </View>
         )}
       </View>
 
-      {/* White info section */}
-      <View style={styles.info}>
-        {/* Name */}
-        <Text style={styles.name} numberOfLines={1}>{facility.name}</Text>
+      {/* ── White info section ── */}
+      <View style={styles.infoSection}>
+        {/* Facility name */}
+        <Text style={styles.facilityName} numberOfLines={1}>{facility.name}</Text>
 
-        {/* Address */}
+        {/* Address row */}
         {facility.address && (
-          <View style={styles.addrRow}>
-            <Text style={styles.addr} numberOfLines={1}>{facility.address}</Text>
-            <View style={styles.pinBadge}>
-              <Ionicons name="location-sharp" size={11} color={Colors.brand.primary} />
+          <View style={styles.addressRow}>
+            <Text style={styles.addressText} numberOfLines={1}>{facility.address}</Text>
+            <View style={styles.pinIcon}>
+              <Ionicons name="location-sharp" size={10} color={Colors.brand.primary} />
             </View>
           </View>
         )}
 
-        {/* Sports + divider */}
-        {sports.length > 0 && (
+        {/* Divider */}
+        <View style={styles.divider} />
+
+        {/* Sports chips + price */}
+        <View style={styles.infoFooter}>
           <View style={styles.sportsRow}>
             {sports.map((s) => (
               <View key={s} style={styles.sportChip}>
-                <Text style={styles.sportEmoji}>{SPORT_EMOJI[s] ?? '🏟'}</Text>
-                <Text style={styles.sportLabel}>{SPORT_LABEL[s] ?? s}</Text>
+                <Text style={styles.sportChipEmoji}>{SPORT_EMOJI[s] ?? '🏟'}</Text>
+                <Text style={styles.sportChipLabel}>{SPORT_LABEL[s] ?? s}</Text>
               </View>
             ))}
           </View>
-        )}
+          {price > 0 && (
+            <View style={styles.priceTag}>
+              <Text style={styles.priceValue}>{price}</Text>
+              <Text style={styles.priceCurrency}> ر.س</Text>
+            </View>
+          )}
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -191,87 +214,116 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.10,
     shadowRadius: 12,
-    elevation: 6,
+    elevation: 5,
   },
 
   imgWrap: { position: 'relative' },
   image: {
     width: '100%',
-    height: 195,
+    height: 170,
     backgroundColor: Colors.background.secondary,
+  },
+  imgTopGradient: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0,
+    height: 70,
   },
 
   ratingBadge: {
     position: 'absolute', top: 10, left: 10,
     flexDirection: 'row', alignItems: 'center', gap: 3,
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: 'rgba(255,255,255,0.96)',
     paddingHorizontal: 8, paddingVertical: 4,
     borderRadius: Radius.full,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 4, elevation: 2,
   },
-  ratingText: { fontSize: 11, fontWeight: '700', color: Colors.text.primary },
+  ratingText: { fontSize: 11, fontWeight: '800', color: '#92400E' },
 
   heartBtn: {
-    position: 'absolute', top: 8, right: 8,
-    width: 34, height: 34, borderRadius: 17,
+    position: 'absolute', top: 9, right: 9,
+    width: 32, height: 32, borderRadius: 16,
     backgroundColor: 'rgba(0,0,0,0.32)',
     alignItems: 'center', justifyContent: 'center',
   },
 
-  priceBadge: {
-    position: 'absolute', bottom: 10, right: 10,
-    backgroundColor: Colors.brand.primary,
-    paddingHorizontal: 10, paddingVertical: 5,
+  sportImageBadge: {
+    position: 'absolute', bottom: 10, left: 10,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: 'rgba(0,0,0,0.48)',
     borderRadius: Radius.full,
+    paddingHorizontal: 9, paddingVertical: 4,
+    borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)',
   },
-  priceBadgeText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  sportImageEmoji: { fontSize: 12 },
+  sportImageLabel: { fontSize: 11, fontWeight: '700', color: '#fff' },
 
-  // White info section
-  info: {
+  // ── White info section ────────────────────────────────
+  infoSection: {
     backgroundColor: Colors.background.elevated,
-    padding: Spacing.md,
-    gap: 6,
+    paddingHorizontal: 12,
+    paddingTop: 10,
+    paddingBottom: 11,
+    gap: 5,
   },
-  name: {
-    fontSize: 15,
+
+  facilityName: {
+    fontSize: 14,
     fontWeight: '800',
     color: Colors.text.primary,
     textAlign: 'right',
   },
-  addrRow: {
+
+  addressRow: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
   },
-  addr: {
-    ...Typography.bodySm,
+  addressText: {
+    fontSize: 11,
     color: Colors.text.secondary,
     flex: 1,
     textAlign: 'right',
   },
-  pinBadge: {
-    width: 20, height: 20, borderRadius: 5,
+  pinIcon: {
+    width: 16, height: 16, borderRadius: 4,
     backgroundColor: Colors.brand.light,
     borderWidth: 1, borderColor: Colors.brand.border,
     alignItems: 'center', justifyContent: 'center',
   },
-  sportsRow: {
-    flexDirection: 'row-reverse',
-    flexWrap: 'wrap',
-    gap: 5,
-    marginTop: 2,
+
+  divider: {
+    height: 1,
+    backgroundColor: Colors.border.default,
+    marginVertical: 2,
   },
-  sportChip: {
+
+  infoFooter: {
     flexDirection: 'row-reverse',
     alignItems: 'center',
-    gap: 3,
+    justifyContent: 'space-between',
+    marginTop: 1,
+  },
+  sportsRow: { flexDirection: 'row-reverse', gap: 4 },
+  sportChip: {
+    flexDirection: 'row-reverse', alignItems: 'center', gap: 3,
     backgroundColor: Colors.brand.light,
     borderRadius: Radius.full,
-    paddingHorizontal: 8, paddingVertical: 3,
-    borderWidth: 1,
-    borderColor: Colors.brand.border,
+    paddingHorizontal: 7, paddingVertical: 3,
+    borderWidth: 1, borderColor: Colors.brand.border,
   },
-  sportEmoji: { fontSize: 11 },
-  sportLabel: { fontSize: 11, fontWeight: '600', color: Colors.brand.dark },
+  sportChipEmoji: { fontSize: 10 },
+  sportChipLabel: { fontSize: 10, fontWeight: '600', color: Colors.brand.dark },
+
+  priceTag: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    backgroundColor: Colors.brand.primary,
+    borderRadius: Radius.md,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  priceValue: { fontSize: 14, fontWeight: '800', color: '#fff' },
+  priceCurrency: { fontSize: 9, fontWeight: '600', color: 'rgba(255,255,255,0.85)' },
 
   // ── Compact card ─────────────────────────────────────
   compact: {
@@ -281,7 +333,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border.strong,
     overflow: 'hidden',
-    height: 112,
+    height: 108,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.07,
@@ -290,17 +342,23 @@ const styles = StyleSheet.create({
   },
   compactImgWrap: { position: 'relative' },
   compactImg: {
-    width: 112, height: 112,
+    width: 108, height: 108,
     backgroundColor: Colors.background.secondary,
   },
+  compactSportBadge: {
+    position: 'absolute', top: 6, right: 6,
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: 'rgba(0,0,0,0.42)',
+    alignItems: 'center', justifyContent: 'center',
+  },
   compactRatingBadge: {
-    position: 'absolute', bottom: 6, right: 6,
+    position: 'absolute', bottom: 5, left: 5,
     flexDirection: 'row', alignItems: 'center', gap: 2,
     backgroundColor: 'rgba(255,255,255,0.93)',
     paddingHorizontal: 5, paddingVertical: 2,
     borderRadius: Radius.full,
   },
-  compactRatingText: { fontSize: 10, fontWeight: '700', color: Colors.text.primary },
+  compactRatingText: { fontSize: 9, fontWeight: '700', color: Colors.text.primary },
 
   compactInfo: {
     flex: 1,
@@ -316,17 +374,11 @@ const styles = StyleSheet.create({
   },
   compactAddrRow: {
     flexDirection: 'row-reverse',
-    alignItems: 'center', gap: 4,
+    alignItems: 'center', gap: 3,
   },
   compactAddr: {
-    fontSize: 11, color: Colors.text.secondary,
+    fontSize: 10, color: Colors.text.secondary,
     flex: 1, textAlign: 'right',
-  },
-  pinBadgeSm: {
-    width: 16, height: 16, borderRadius: 4,
-    backgroundColor: Colors.brand.light,
-    borderWidth: 1, borderColor: Colors.brand.border,
-    alignItems: 'center', justifyContent: 'center',
   },
   compactFooter: {
     flexDirection: 'row-reverse',
@@ -334,16 +386,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     width: '100%',
   },
+  compactSports: { flexDirection: 'row-reverse', gap: 3 },
   pricePillSm: {
     backgroundColor: Colors.brand.primary,
     borderRadius: Radius.full,
     paddingHorizontal: 8, paddingVertical: 3,
   },
-  pricePillSmText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+  pricePillSmText: { fontSize: 10, fontWeight: '700', color: '#fff' },
 
   compactHeart: {
-    position: 'absolute', top: 7, left: 7,
-    width: 26, height: 26, borderRadius: 13,
+    position: 'absolute', top: 6, left: 6,
+    width: 24, height: 24, borderRadius: 12,
     backgroundColor: Colors.background.secondary,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 1, borderColor: Colors.border.default,
