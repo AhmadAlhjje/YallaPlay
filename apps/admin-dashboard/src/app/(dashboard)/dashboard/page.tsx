@@ -1,4 +1,6 @@
 import { Suspense } from 'react';
+
+export const dynamic = 'force-dynamic';
 import { PlatformKPIs } from './_components/PlatformKPIs';
 import { RevenueChart } from './_components/RevenueChart';
 import { TopFacilitiesTable } from './_components/TopFacilitiesTable';

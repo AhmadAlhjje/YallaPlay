@@ -10,7 +10,10 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 const STATUS_LABEL: Record<string, string> = {
-  pending: 'معلّق', confirmed: 'مؤكّد', completed: 'مكتمل', cancelled: 'ملغي',
+  pending:   'معلق',
+  confirmed: 'مؤكد',
+  completed: 'مكتمل',
+  cancelled: 'ملغي',
 };
 
 async function fetchRecent() {
@@ -27,26 +30,27 @@ export async function RecentBookings() {
 
   return (
     <GlassCard padding={false}>
-      <div className="p-5 border-b border-white/8 flex items-center justify-between">
-        <h3 className="text-base font-semibold text-[--text-primary]">آخر الحجوزات</h3>
-        <a href="/dashboard/bookings" className="text-xs text-brand-primary hover:text-indigo-300 transition-colors">
+      <div className="p-5 border-b border-white/[0.07] flex items-center justify-between">
+        <h3 className="text-sm font-bold text-[--text-primary]">آخر الحجوزات</h3>
+        <a href="/dashboard/bookings" className="text-xs text-brand-primary hover:text-emerald-300 transition-colors">
           عرض الكل ←
         </a>
       </div>
 
-      <div className="divide-y divide-white/5">
+      <div className="divide-y divide-white/[0.05]">
         {bookings.length === 0 ? (
-          <p className="text-center py-8 text-[--text-tertiary] text-sm">لا توجد حجوزات</p>
+          <p className="text-center py-10 text-[--text-tertiary] text-sm">لا توجد حجوزات</p>
         ) : (
           bookings.map((b: any) => (
-            <div key={b._id} className="flex items-center gap-3 px-5 py-3 hover:bg-white/3 transition-colors">
-              {/* Avatar */}
-              <div className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
-                style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
+            <div key={b._id} className="flex items-center gap-3 px-5 py-3.5 hover:bg-white/[0.02] transition-colors">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0"
+                style={{ background: 'linear-gradient(135deg, #16A34A, #15803D)' }}
+              >
                 {(b.user?.name ?? 'م')[0]}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-[--text-primary] truncate">
+                <p className="text-sm font-semibold text-[--text-primary] truncate">
                   {b.user?.name ?? '—'}
                 </p>
                 <p className="text-xs text-[--text-tertiary] truncate">

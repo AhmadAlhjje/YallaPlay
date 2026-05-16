@@ -16,9 +16,9 @@ function HealthBar({ label, value, max, color }: { label: string; value: number;
     <div>
       <div className="flex justify-between items-center mb-1.5">
         <span className="text-xs text-[--text-secondary]">{label}</span>
-        <span className="text-xs font-semibold tabular-nums" style={{ color }}>{value.toLocaleString()}</span>
+        <span className="text-xs font-bold tabular-nums" style={{ color }}>{value.toLocaleString('ar-SA')}</span>
       </div>
-      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.08)' }}>
+      <div className="h-1.5 rounded-full overflow-hidden" style={{ background: 'rgba(255,255,255,0.07)' }}>
         <div
           className="h-full rounded-full transition-all duration-700"
           style={{ width: `${pct}%`, background: color }}
@@ -32,38 +32,38 @@ export async function PlatformHealth() {
   const s = await fetchSummary();
 
   const total = s?.totalBookings ?? 1;
-  const metrics = [
-    { label: 'حجوزات مؤكدة', value: s?.confirmedBookings ?? 0, color: '#10B981' },
+  const bookingMetrics = [
+    { label: 'حجوزات مؤكدة',  value: s?.confirmedBookings ?? 0, color: '#10B981' },
     { label: 'حجوزات معلقة',  value: s?.pendingBookings ?? 0,   color: '#F59E0B' },
+    { label: 'حجوزات مكتملة', value: s?.completedBookings ?? 0, color: '#3B82F6' },
     { label: 'حجوزات ملغاة',  value: s?.cancelledBookings ?? 0, color: '#EF4444' },
-    { label: 'مكتملة',        value: s?.completedBookings ?? 0, color: '#3B82F6' },
   ];
 
   const planDist = [
-    { label: 'خطة مجانية',  value: s?.planDistribution?.free ?? 0,   color: '#6B7280' },
-    { label: 'خطة برايمر',  value: s?.planDistribution?.primer ?? 0, color: '#4F46E5' },
-    { label: 'خطة برو',     value: s?.planDistribution?.pro ?? 0,    color: '#F59E0B' },
+    { label: 'خطة مجانية', value: s?.planDistribution?.free ?? 0,   color: '#6B7280' },
+    { label: 'خطة برايمر', value: s?.planDistribution?.primer ?? 0, color: '#4F46E5' },
+    { label: 'خطة برو',    value: s?.planDistribution?.pro ?? 0,    color: '#F59E0B' },
   ];
   const totalOwners = planDist.reduce((sum, p) => sum + p.value, 0) || 1;
 
   return (
-    <GlassCard className="h-full space-y-6">
-      <h3 className="text-base font-semibold text-[--text-primary]">صحة المنصة</h3>
+    <GlassCard className="h-full space-y-5">
+      <h3 className="text-sm font-bold text-[--text-primary]">صحة المنصة</h3>
 
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-[--text-tertiary] mb-3">
+        <p className="text-xs font-semibold text-[--text-tertiary] mb-3 uppercase tracking-wider">
           توزيع الحجوزات
         </p>
         <div className="space-y-3">
-          {metrics.map((m) => (
+          {bookingMetrics.map((m) => (
             <HealthBar key={m.label} label={m.label} value={m.value} max={total} color={m.color} />
           ))}
         </div>
       </div>
 
-      <div className="border-t border-white/8 pt-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-[--text-tertiary] mb-3">
-          توزيع خطط المالكين
+      <div className="border-t border-white/[0.07] pt-4">
+        <p className="text-xs font-semibold text-[--text-tertiary] mb-3 uppercase tracking-wider">
+          خطط المالكين
         </p>
         <div className="space-y-3">
           {planDist.map((p) => (
@@ -72,14 +72,25 @@ export async function PlatformHealth() {
         </div>
       </div>
 
-      {/* Quick stats */}
-      <div className="border-t border-white/8 pt-4 grid grid-cols-2 gap-3">
+      <div className="border-t border-white/[0.07] pt-4 grid grid-cols-2 gap-3">
         {[
-          { label: 'معدل التأكيد', value: s ? `${((s.confirmedBookings / (total || 1)) * 100).toFixed(0)}%` : '—', color: '#10B981' },
-          { label: 'معدل الإلغاء', value: s ? `${(s.cancellationRate ?? 0).toFixed(1)}%` : '—', color: '#EF4444' },
+          {
+            label: 'معدل التأكيد',
+            value: s ? `${((s.confirmedBookings / (total || 1)) * 100).toFixed(0)}%` : '—',
+            color: '#10B981',
+          },
+          {
+            label: 'معدل الإلغاء',
+            value: s ? `${(s.cancellationRate ?? 0).toFixed(1)}%` : '—',
+            color: '#EF4444',
+          },
         ].map((stat) => (
-          <div key={stat.label} className="glass-card-subtle p-3 rounded-lg text-center">
-            <p className="text-lg font-bold tabular-nums" style={{ color: stat.color }}>{stat.value}</p>
+          <div
+            key={stat.label}
+            className="rounded-lg p-3 text-center border border-white/[0.07]"
+            style={{ background: 'rgba(255,255,255,0.025)' }}
+          >
+            <p className="text-xl font-bold tabular-nums" style={{ color: stat.color }}>{stat.value}</p>
             <p className="text-xs text-[--text-tertiary] mt-0.5">{stat.label}</p>
           </div>
         ))}

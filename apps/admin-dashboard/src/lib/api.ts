@@ -99,14 +99,16 @@ export const adminApi = {
     apiClient.patch(`/admin/users/${id}/suspend`),
   reactivateUser: (id: string) =>
     apiClient.patch(`/admin/users/${id}/reactivate`),
-  overridePlan: (id: string, planTier: string) =>
-    apiClient.patch(`/admin/users/${id}/plan`, { plan: planTier }),
+  overridePlan: (id: string, dto: { plan: string; planExpiresAt?: string }) =>
+    apiClient.patch(`/admin/users/${id}/plan`, dto),
 
   // Facilities
   listFacilities: (params?: { search?: string; isActive?: boolean; page?: number; limit?: number }) =>
     apiClient.get<{ data: { facilities: any[]; pagination: any } }>('/admin/facilities', { params }),
   getFacilityDetail: (id: string) =>
     apiClient.get<{ data: any }>(`/admin/facilities/${id}`),
+  updateFacility: (id: string, dto: Record<string, any>) =>
+    apiClient.patch<{ data: any }>(`/admin/facilities/${id}`, dto),
   suspendFacility: (id: string) =>
     apiClient.patch(`/admin/facilities/${id}/suspend`),
   restoreFacility: (id: string) =>
@@ -117,11 +119,11 @@ export const adminApi = {
     apiClient.get<{ data: { bookings: any[]; pagination: any } }>('/admin/bookings', { params }),
 
   // Plan override by phone (finds user by phone, then overrides plan)
-  overridePlanByPhone: async (phone: string, planTier: string) => {
+  overridePlanByPhone: async (phone: string, dto: { plan: string; planExpiresAt?: string }) => {
     const res = await apiClient.get('/admin/users', { params: { search: phone, limit: 1 } });
     const user = res.data?.data?.users?.[0];
     if (!user) throw new Error('المستخدم غير موجود');
-    return apiClient.patch(`/admin/users/${user._id}/plan`, { plan: planTier });
+    return apiClient.patch(`/admin/users/${user._id}/plan`, dto);
   },
 };
 

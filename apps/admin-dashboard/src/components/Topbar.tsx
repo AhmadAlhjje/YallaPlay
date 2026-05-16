@@ -1,48 +1,44 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
+import { Bell } from 'lucide-react';
 
-const PAGE_TITLES: Record<string, string> = {
-  '/dashboard':              'لوحة التحكم',
-  '/dashboard/facilities':   'الملاعب والمالكون',
-  '/dashboard/users':        'إدارة المستخدمين',
-  '/dashboard/plans':        'خطط الاشتراك',
-  '/dashboard/bookings':     'إدارة الحجوزات',
+const PAGE_TITLES: Record<string, { title: string; sub: string }> = {
+  '/dashboard':              { title: 'لوحة التحكم',        sub: 'نظرة عامة على أداء المنصة' },
+  '/dashboard/facilities':   { title: 'الملاعب والمالكون',  sub: 'إدارة الملاعب المسجلة في المنصة' },
+  '/dashboard/users':        { title: 'إدارة المستخدمين',   sub: 'اللاعبون والمالكون المسجلون' },
+  '/dashboard/plans':        { title: 'خطط الاشتراك',       sub: 'إدارة الباقات والاشتراكات' },
+  '/dashboard/bookings':     { title: 'الحجوزات',            sub: 'جميع حجوزات المنصة' },
 };
 
 export function Topbar() {
   const pathname = usePathname();
-  const title = PAGE_TITLES[pathname] ?? 'يلا بلاي';
+  const page = PAGE_TITLES[pathname] ?? { title: 'يلا بلاي', sub: '' };
 
-  const now = new Date().toLocaleDateString('ar-SY', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  const now = new Date().toLocaleDateString('ar-SA', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
   });
 
   return (
     <header
-      className="fixed top-0 left-0 right-64 h-16 flex items-center justify-between px-6 z-30 border-b border-white/8"
-      style={{ background: 'rgba(10,14,26,0.8)', backdropFilter: 'blur(16px)' }}
+      className="fixed top-0 left-0 right-64 h-16 flex items-center justify-between px-6 z-30 border-b border-white/[0.07]"
+      style={{ background: 'rgba(10,18,13,0.85)', backdropFilter: 'blur(16px)' }}
     >
       <div>
-        <h1 className="text-lg font-bold text-[--text-primary]">{title}</h1>
+        <h1 className="text-base font-bold text-[--text-primary] leading-tight">{page.title}</h1>
         <p className="text-xs text-[--text-tertiary] hidden sm:block">{now}</p>
       </div>
 
       <div className="flex items-center gap-3">
-        {/* Global search */}
-        <div className="relative hidden md:block">
-          <input
-            type="text"
-            placeholder="بحث سريع..."
-            className="field-input w-52 pl-8 text-xs h-8"
-          />
-          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[--text-tertiary] text-xs">🔍</span>
-        </div>
-
-        {/* Notification bell */}
-        <button className="w-8 h-8 rounded-lg flex items-center justify-center text-[--text-secondary] hover:text-[--text-primary] transition-colors border border-white/10 hover:border-white/20"
-          style={{ background: 'rgba(255,255,255,0.04)' }}>
-          🔔
+        <button
+          className="w-9 h-9 rounded-lg flex items-center justify-center text-[--text-secondary] hover:text-[--text-primary] transition-colors relative"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.09)' }}
+        >
+          <Bell size={16} />
+          <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-brand-primary border border-canvas-primary" />
         </button>
       </div>
     </header>

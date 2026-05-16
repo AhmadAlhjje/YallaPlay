@@ -19,7 +19,10 @@ const TABS: { key: Granularity; label: string }[] = [
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="glass-card-strong px-3 py-2 text-sm">
+    <div
+      className="rounded-xl px-3 py-2.5 text-sm border border-white/10"
+      style={{ background: 'rgba(13,26,16,0.95)', backdropFilter: 'blur(12px)' }}
+    >
       <p className="text-[--text-tertiary] text-xs mb-1">{label}</p>
       <p className="font-bold text-emerald-400">{formatCurrency(payload[0]?.value ?? 0, 'SYP')}</p>
       {payload[1] && (
@@ -46,22 +49,25 @@ export function RevenueChart() {
 
   return (
     <GlassCard padding={false} className="h-full">
-      <div className="p-5 flex items-start justify-between border-b border-white/8">
+      <div className="p-5 flex items-start justify-between border-b border-white/[0.07]">
         <div>
-          <h3 className="text-base font-semibold text-[--text-primary]">الإيرادات</h3>
-          <p className="text-2xl font-bold text-emerald-400 mt-1 tabular-nums">
+          <p className="text-xs text-[--text-tertiary] mb-1">إجمالي الإيرادات</p>
+          <p className="text-2xl font-bold text-emerald-400 tabular-nums">
             {formatCurrency(totalRevenue, 'SYP')}
           </p>
         </div>
-        <div className="flex gap-1 p-1 rounded-lg border border-white/10" style={{ background: 'rgba(255,255,255,0.04)' }}>
+        <div
+          className="flex gap-1 p-1 rounded-lg border border-white/10"
+          style={{ background: 'rgba(255,255,255,0.03)' }}
+        >
           {TABS.map((tab) => (
             <button
               key={tab.key}
               onClick={() => setGranularity(tab.key)}
               className={cn(
-                'px-3 py-1 rounded-md text-xs font-medium transition-all duration-150',
+                'px-3 py-1 rounded-md text-xs font-semibold transition-all duration-150',
                 granularity === tab.key
-                  ? 'bg-brand-primary text-white shadow-sm'
+                  ? 'bg-brand-primary text-white'
                   : 'text-[--text-tertiary] hover:text-[--text-secondary]',
               )}
             >
@@ -85,18 +91,18 @@ export function RevenueChart() {
             <AreaChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
               <defs>
                 <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#10B981" stopOpacity={0.25} />
+                  <stop offset="5%"  stopColor="#10B981" stopOpacity={0.2} />
                   <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
               <XAxis
                 dataKey="label"
-                tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }}
+                tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontFamily: 'Cairo' }}
                 axisLine={false} tickLine={false}
               />
               <YAxis
-                tick={{ fill: 'var(--text-tertiary)', fontSize: 11 }}
+                tick={{ fill: 'var(--text-tertiary)', fontSize: 11, fontFamily: 'Cairo' }}
                 axisLine={false} tickLine={false}
                 tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
                 width={36}
@@ -109,7 +115,7 @@ export function RevenueChart() {
                 strokeWidth={2}
                 fill="url(#revenueGrad)"
                 dot={false}
-                activeDot={{ r: 4, fill: '#10B981', stroke: '#0A0E1A', strokeWidth: 2 }}
+                activeDot={{ r: 4, fill: '#10B981', stroke: '#0A120D', strokeWidth: 2 }}
               />
             </AreaChart>
           </ResponsiveContainer>
